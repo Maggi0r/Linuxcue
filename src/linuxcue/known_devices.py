@@ -19,6 +19,8 @@ class KnownDevice:
     capabilities: tuple[str, ...]
     default_product_id: int
     default_transport: str
+    mock_transport: str
+    mock_serial_number: str
     mock_notes: tuple[str, ...]
 
     def to_support(self) -> DeviceSupport:
@@ -48,6 +50,8 @@ TARGET_DEVICES: tuple[KnownDevice, ...] = (
         capabilities=("device-detection", "profile-mapping", "rgb-zones-descriptor-mapped", "macro-keys-planned"),
         default_product_id=0x1B2D,
         default_transport="hid",
+        mock_transport="hid",
+        mock_serial_number="MOCK-K95-RGB-PLATINUM-001",
         mock_notes=("Main keyboard endpoint", "Media keys and RGB controller expected over HID"),
     ),
     KnownDevice(
@@ -63,6 +67,8 @@ TARGET_DEVICES: tuple[KnownDevice, ...] = (
         capabilities=("device-detection", "profile-mapping", "dpi-profile-mapped", "rgb-profile-mapped", "buttons-profile-mapped"),
         default_product_id=0x1B2E,
         default_transport="hid",
+        mock_transport="hid",
+        mock_serial_number="MOCK-M65-PRO-RGB-001",
         mock_notes=("Primary mouse endpoint", "DPI stages and RGB logo path to be mapped"),
     ),
     KnownDevice(
@@ -78,7 +84,13 @@ TARGET_DEVICES: tuple[KnownDevice, ...] = (
         capabilities=("device-detection", "audio-standard", "eq-10-band-descriptor-mapped", "headset-controls-descriptor-mapped", "battery-read-candidate", "rgb-descriptor-mapped"),
         default_product_id=0x0A3D,
         default_transport="usb-audio+hid",
-        mock_notes=("Audio playback is mostly standard USB audio", "Battery and RGB likely sit on vendor-specific HID interface"),
+        mock_transport="usb-audio+hid",
+        mock_serial_number="MOCK-VIRTUOSO-SE-001",
+        mock_notes=(
+            "Audio playback is expected to use standard USB audio",
+            "Battery, RGB, sidetone, and EQ controls are expected on a vendor-specific HID interface",
+            "Wireless operation can be paired with the Virtuoso RGB Wireless USB Receiver fixture",
+        ),
     ),
     KnownDevice(
         slug="virtuoso-rgb-wireless-receiver",
@@ -93,7 +105,13 @@ TARGET_DEVICES: tuple[KnownDevice, ...] = (
         capabilities=("device-detection", "wireless-link-descriptor-mapped", "receiver-status-read-candidate", "pairing-planned"),
         default_product_id=0x0A46,
         default_transport="hid",
-        mock_notes=("Separate wireless dongle for Virtuoso link path", "Likely carries pairing and wireless transport control reports"),
+        mock_transport="wireless-receiver+hid",
+        mock_serial_number="MOCK-VIRTUOSO-RECEIVER-001",
+        mock_notes=(
+            "Companion receiver for wireless Virtuoso SE operation",
+            "Link state and routing packets are prepared separately from the headset profile",
+            "Product id is based on the CachyOS VM hidapi discovery output",
+        ),
     ),
 )
 
@@ -138,8 +156,8 @@ def mock_probe_for_slug(slug: str) -> ProbeData | None:
         product_name=candidate.model_hint,
         vendor_id=0x1B1C,
         product_id=candidate.default_product_id,
-        transport=candidate.default_transport,
-        serial_number=f"MOCK-{candidate.slug.upper()}-001",
+        transport=candidate.mock_transport,
+        serial_number=candidate.mock_serial_number,
         interface_number=1,
         notes=list(candidate.mock_notes),
     )

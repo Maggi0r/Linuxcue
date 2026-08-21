@@ -16,7 +16,7 @@ class ProbeStore:
 
     def save(self, probe: ProbeData) -> Path:
         path = self.probe_path(probe.slug)
-        path.write_text(json.dumps(probe.to_dict(), indent=2), encoding="utf-8")
+        path.write_text(json.dumps(probe.to_dict(), indent=2) + "\n", encoding="utf-8")
         return path
 
     def load(self, slug: str) -> ProbeData | None:

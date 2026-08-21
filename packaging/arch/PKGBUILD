@@ -4,7 +4,7 @@ pkgver=0.1.0
 pkgrel=1
 pkgdesc="Linux-first Corsair control center for K95 RGB Platinum, M65 Pro RGB, and Virtuoso SE"
 arch=("any")
-url="https://github.com/djmag/linuxcue"
+url="https://github.com/Maggi0r/Linuxcue"
 license=("MIT")
 depends=(
   "python"

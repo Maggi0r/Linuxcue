@@ -17,7 +17,7 @@ class ProfileStore:
 
     def save(self, profile: Profile) -> Path:
         path = self.profile_path(profile.name)
-        path.write_text(json.dumps(profile.to_dict(), indent=2), encoding="utf-8")
+        path.write_text(json.dumps(profile.to_dict(), indent=2) + "\n", encoding="utf-8")
         return path
 
     def delete(self, name: str) -> bool:
