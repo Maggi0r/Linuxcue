@@ -136,12 +136,13 @@ Virtuoso EQ through EasyEffects/PipeWire:
 - `pyside6` and `qt6-declarative` for the Qt Quick/QML GUI
 - `python-hidapi` and `python-pyusb` for Corsair HID/USB access
 - `easyeffects` and `lsp-plugins-lv2` for Virtuoso Linux EQ profiles
+- `git` for GitHub-based update checks and self-updates
 - `base-devel`, `python-build`, `python-installer`, and `python-wheel` for local package builds
 
 Manual build and install:
 
 ```bash
-sudo pacman -S --needed base-devel python python-build python-installer python-wheel python-hidapi python-pyusb pyside6 qt6-declarative easyeffects lsp-plugins-lv2
+sudo pacman -S --needed base-devel git python python-build python-installer python-wheel python-hidapi python-pyusb pyside6 qt6-declarative easyeffects lsp-plugins-lv2
 bash scripts/build-cachyos-package.sh
 sudo pacman -U packaging/arch/linuxcue-0.1.0-1-any.pkg.tar.zst
 sudo udevadm control --reload-rules
@@ -209,15 +210,27 @@ quick zones, color controls, and the existing Python/HID backend underneath.
 
 ## Updates
 
-The clean update path for CachyOS/Arch is:
+The QML dashboard checks GitHub on startup and can also be checked manually with
+the `Update pruefen` button in the sidebar. The check compares both the newest
+GitHub release tag and the latest commit on the repository default branch, so it
+also detects code changes when no new release was published yet.
 
-1. Push releases to GitHub with a version tag, for example `v0.1.1`.
-2. Build a package from the GitHub source archive or publish a `linuxcue-git`
-   AUR package.
-3. Install/update through `pacman` or an AUR helper instead of copying files by
-   hand.
+Manual CLI check:
 
-Until a public GitHub/AUR package exists, update from the project checkout with:
+```bash
+linuxcue check-update
+```
+
+Install the newest GitHub source and rebuild the CachyOS package:
+
+```bash
+linuxcue install-update --yes
+```
+
+The updater downloads the repository to `~/.cache/linuxcue/source`, runs the
+included CachyOS package installer, reloads udev rules, and leaves the installed
+files managed through `pacman`. From an existing checkout you can still update
+manually with:
 
 ```bash
 git pull

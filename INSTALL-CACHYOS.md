@@ -19,7 +19,7 @@ launcher on the new QML dashboard.
 ## Build Dependencies
 
 ```bash
-sudo pacman -S --needed base-devel python python-build python-installer python-wheel python-hidapi python-pyusb pyside6 qt6-declarative easyeffects lsp-plugins-lv2
+sudo pacman -S --needed base-devel git python python-build python-installer python-wheel python-hidapi python-pyusb pyside6 qt6-declarative easyeffects lsp-plugins-lv2
 ```
 
 If the GUI fails with `libtk8.6.so: cannot open shared object file`, install or
@@ -47,6 +47,21 @@ linuxcue qml-gui
 ```
 
 Or start from the desktop menu entry named `linuxcue`.
+
+## Updates From GitHub
+
+The QML dashboard checks GitHub automatically after startup. You can also use the
+sidebar buttons or the CLI:
+
+```bash
+linuxcue check-update
+linuxcue install-update --yes
+```
+
+`check-update` compares the newest GitHub release and the latest commit on the
+default branch. `install-update` downloads `https://github.com/Maggi0r/Linuxcue`
+to `~/.cache/linuxcue/source`, builds the CachyOS package, installs it through
+`pacman`, and reloads the udev rules.
 
 ## Development Install
 

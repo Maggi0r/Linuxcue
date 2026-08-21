@@ -370,6 +370,12 @@ ApplicationWindow {
                     Button { Layout.fillWidth: true; text: "Refresh"; onClicked: linuxcue.refresh() }
                 }
 
+                RowLayout {
+                    Layout.fillWidth: true
+                    Button { Layout.fillWidth: true; text: "Update pruefen"; onClicked: linuxcue.checkForUpdates() }
+                    Button { Layout.fillWidth: true; text: "Update installieren"; onClicked: linuxcue.installUpdate() }
+                }
+
                 Text {
                     Layout.fillWidth: true
                     text: linuxcue.status

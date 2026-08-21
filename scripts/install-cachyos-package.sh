@@ -11,6 +11,7 @@ fi
 echo "Installing linuxcue build/runtime dependencies..."
 sudo pacman -S --needed \
   base-devel \
+  git \
   python \
   python-build \
   python-installer \

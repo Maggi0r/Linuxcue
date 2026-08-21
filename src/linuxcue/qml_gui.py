@@ -4,6 +4,9 @@ import sys
 import json
 import base64
 import copy
+import shutil
+import subprocess
+import threading
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -74,6 +77,7 @@ if QT_QML_IMPORT_ERROR is None:
 
     class LinuxCueQmlBridge(QObject):
         dataChanged = Signal()
+        updateStatusReady = Signal(str)
 
         def __init__(self) -> None:
             super().__init__()
@@ -101,7 +105,9 @@ if QT_QML_IMPORT_ERROR is None:
             self._m65_input_timer.setInterval(80)
             self._m65_input_timer.timeout.connect(self._poll_m65_dpi_input)
             self._copied_profile: dict[str, Any] | None = None
+            self.updateStatusReady.connect(self._apply_update_status)
             self.refresh()
+            QTimer.singleShot(4500, self.checkForUpdates)
 
         @Property("QVariantList", notify=dataChanged)
         def profiles(self) -> list[dict[str, Any]]:
@@ -384,6 +390,73 @@ if QT_QML_IMPORT_ERROR is None:
                 self._status = f"Profil exportiert: {path}"
             except Exception as exc:
                 self._status = f"Profilexport fehlgeschlagen: {exc}"
+            self.dataChanged.emit()
+
+        @Slot()
+        def checkForUpdates(self) -> None:
+            self._status = "Pruefe GitHub auf Updates..."
+            self.dataChanged.emit()
+            thread = threading.Thread(target=self._check_for_updates_worker, daemon=True)
+            thread.start()
+
+        def _check_for_updates_worker(self) -> None:
+            try:
+                from .updater import check_github_update
+
+                info = check_github_update()
+                self.updateStatusReady.emit(self._format_update_status(info))
+            except Exception as exc:
+                self.updateStatusReady.emit(f"Update-Pruefung fehlgeschlagen: {exc}")
+
+        def _format_update_status(self, info: dict[str, Any]) -> str:
+            if not info.get("update_available"):
+                return str(info.get("recommendation") or "linuxcue ist aktuell.")
+            parts: list[str] = []
+            release = info.get("latest_release")
+            if info.get("release_update_available") and isinstance(release, dict):
+                parts.append(f"Release {release.get('tag')}")
+            latest_commit = info.get("latest_commit")
+            if info.get("source_update_available") and isinstance(latest_commit, dict):
+                parts.append(f"GitHub-Code {latest_commit.get('short_sha')}")
+            detail = " / ".join(part for part in parts if part) or "Update"
+            return f"Update verfuegbar: {detail}. Nutze 'Update installieren'."
+
+        @Slot(str)
+        def _apply_update_status(self, message: str) -> None:
+            self._status = message
+            self.dataChanged.emit()
+
+        @Slot()
+        def installUpdate(self) -> None:
+            if not sys.platform.startswith("linux"):
+                self._status = "Update-Installation ist nur auf Linux/CachyOS aktiv."
+                self.dataChanged.emit()
+                return
+            if not shutil.which("bash"):
+                self._status = "Update nicht moeglich: bash wurde nicht gefunden."
+                self.dataChanged.emit()
+                return
+            command = (
+                "linuxcue install-update --yes; "
+                "status=$?; echo; "
+                "if [ $status -eq 0 ]; then echo 'linuxcue Update abgeschlossen.'; "
+                "else echo 'linuxcue Update fehlgeschlagen.'; fi; "
+                "echo 'Fenster kann geschlossen werden.'; "
+                "read -r -p 'Enter zum Schliessen...'; exit $status"
+            )
+            terminals = [
+                ["konsole", "--noclose", "-e", "bash", "-lc", command],
+                ["gnome-terminal", "--", "bash", "-lc", command],
+                ["xfce4-terminal", "--hold", "-e", f"bash -lc {command!r}"],
+                ["xterm", "-hold", "-e", "bash", "-lc", command],
+            ]
+            for args in terminals:
+                if shutil.which(args[0]):
+                    subprocess.Popen(args)
+                    self._status = "Update-Installation im Terminal gestartet."
+                    self.dataChanged.emit()
+                    return
+            self._status = "Kein Terminal gefunden. Bitte ausfuehren: linuxcue install-update --yes"
             self.dataChanged.emit()
 
         @Slot()

@@ -50,6 +50,12 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("vm-usb-doctor", help="Diagnose VirtualBox USB/HID passthrough for Corsair devices.")
     subparsers.add_parser("gui", help="Launch the desktop control center.")
     subparsers.add_parser("qml-gui", help="Launch the experimental Qt Quick/QML dashboard GUI.")
+    check_update = subparsers.add_parser("check-update", help="Check GitHub releases and source commits for updates.")
+    check_update.add_argument("--repo", default="Maggi0r/Linuxcue", help="GitHub repository in owner/name form.")
+    install_update = subparsers.add_parser("install-update", help="Download the latest GitHub source and install the CachyOS package.")
+    install_update.add_argument("--repo", default="Maggi0r/Linuxcue", help="GitHub repository in owner/name form.")
+    install_update.add_argument("--yes", action="store_true", help="Run without an interactive confirmation prompt.")
+    install_update.add_argument("--cache-dir", help="Override the updater source cache directory.")
     subparsers.add_parser("devices", help="List detected Corsair devices.")
     subparsers.add_parser("capture-descriptors", help="Safely capture Linux sysfs HID report descriptors.")
     map_devices = subparsers.add_parser("map-devices", help="Safely map HID endpoints and readable feature reports.")
@@ -220,6 +226,26 @@ def main(argv: list[str] | None = None) -> int:
         from .qml_gui import main as qml_gui_main
 
         return qml_gui_main()
+
+    if args.command == "check-update":
+        from .updater import check_github_update
+
+        try:
+            print(json.dumps(check_github_update(args.repo), indent=2))
+            return 0
+        except Exception as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, indent=2))
+            return 1
+
+    if args.command == "install-update":
+        from .updater import install_update_from_github
+
+        try:
+            print(json.dumps(install_update_from_github(args.repo, yes=args.yes, cache_dir=args.cache_dir), indent=2))
+            return 0
+        except Exception as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, indent=2))
+            return 1
 
     if args.command == "doctor":
         payload = {

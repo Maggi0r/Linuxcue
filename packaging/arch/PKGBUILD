@@ -8,6 +8,7 @@ url="https://github.com/Maggi0r/Linuxcue"
 license=("MIT")
 depends=(
   "python"
+  "git"
   "python-hidapi"
   "python-pyusb"
   "pyside6"
@@ -32,6 +33,14 @@ _project_root="${startdir}/../.."
 build() {
   cd "$_project_root"
   rm -rf dist build src/*.egg-info
+  commit="$(git -C "$_project_root" rev-parse HEAD 2>/dev/null || true)"
+  cat > src/linuxcue/build_info.py <<EOF
+"""Build metadata filled by package builds."""
+
+__commit__ = "${commit}"
+__repo__ = "Maggi0r/Linuxcue"
+__build_source__ = "pkgbuild"
+EOF
   python -m build --wheel --no-isolation
 }
 
