@@ -19,7 +19,7 @@ launcher on the new QML dashboard.
 ## Build Dependencies
 
 ```bash
-sudo pacman -S --needed base-devel git python python-build python-installer python-wheel python-hidapi python-pyusb pyside6 qt6-declarative easyeffects lsp-plugins-lv2
+sudo pacman -S --needed base-devel git python python-build python-installer python-setuptools python-wheel python-hidapi python-pyusb pyside6 qt6-declarative easyeffects lsp-plugins-lv2
 ```
 
 If the GUI fails with `libtk8.6.so: cannot open shared object file`, install or

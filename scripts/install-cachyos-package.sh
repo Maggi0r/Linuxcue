@@ -15,6 +15,7 @@ sudo pacman -S --needed \
   python \
   python-build \
   python-installer \
+  python-setuptools \
   python-wheel \
   python-hidapi \
   python-pyusb \

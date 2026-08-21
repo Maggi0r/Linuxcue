@@ -137,12 +137,12 @@ Virtuoso EQ through EasyEffects/PipeWire:
 - `python-hidapi` and `python-pyusb` for Corsair HID/USB access
 - `easyeffects` and `lsp-plugins-lv2` for Virtuoso Linux EQ profiles
 - `git` for GitHub-based update checks and self-updates
-- `base-devel`, `python-build`, `python-installer`, and `python-wheel` for local package builds
+- `base-devel`, `python-build`, `python-installer`, `python-setuptools`, and `python-wheel` for local package builds
 
 Manual build and install:
 
 ```bash
-sudo pacman -S --needed base-devel git python python-build python-installer python-wheel python-hidapi python-pyusb pyside6 qt6-declarative easyeffects lsp-plugins-lv2
+sudo pacman -S --needed base-devel git python python-build python-installer python-setuptools python-wheel python-hidapi python-pyusb pyside6 qt6-declarative easyeffects lsp-plugins-lv2
 bash scripts/build-cachyos-package.sh
 sudo pacman -U packaging/arch/linuxcue-0.1.0-1-any.pkg.tar.zst
 sudo udevadm control --reload-rules
