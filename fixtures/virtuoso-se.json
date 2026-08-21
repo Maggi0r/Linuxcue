@@ -1,0 +1,14 @@
+{
+  "slug": "virtuoso-se",
+  "product_name": "Corsair Virtuoso SE",
+  "vendor_id": 6940,
+  "product_id": 2621,
+  "transport": "usb-audio+hid",
+  "serial_number": "MOCK-VIRTUOSO-SE-001",
+  "interface_number": 1,
+  "notes": [
+    "Audio playback is expected to use standard USB audio",
+    "Battery, RGB, sidetone, and EQ controls are expected on a vendor-specific HID interface",
+    "Wireless operation can be paired with the Virtuoso RGB Wireless USB Receiver fixture"
+  ]
+}

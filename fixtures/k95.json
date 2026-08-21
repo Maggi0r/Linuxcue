@@ -1,0 +1,13 @@
+{
+  "slug": "k95",
+  "product_name": "Corsair K95 RGB Platinum",
+  "vendor_id": 6940,
+  "product_id": 6957,
+  "transport": "hid",
+  "serial_number": "MOCK-K95-RGB-PLATINUM-001",
+  "interface_number": 1,
+  "notes": [
+    "Main keyboard endpoint",
+    "Media keys and RGB controller expected over HID"
+  ]
+}

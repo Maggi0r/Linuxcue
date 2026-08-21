@@ -1,0 +1,13 @@
+{
+  "slug": "m65",
+  "product_name": "Corsair M65 Pro RGB",
+  "vendor_id": 6940,
+  "product_id": 6958,
+  "transport": "hid",
+  "serial_number": "MOCK-M65-PRO-RGB-001",
+  "interface_number": 1,
+  "notes": [
+    "Primary mouse endpoint",
+    "DPI stages and RGB logo path to be mapped"
+  ]
+}

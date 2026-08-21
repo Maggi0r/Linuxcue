@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "linuxcue"
+version = "0.1.0"
+description = "Early Linux-first Corsair iCUE replacement MVP"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+hid = ["hidapi>=0.14.0"]
+qt = ["PySide6>=6.7"]
+usb = ["pyusb>=1.2.1"]
+
+[project.scripts]
+linuxcue = "linuxcue.cli:main"
+linuxcue-gui = "linuxcue.qt_gui:main"
+linuxcue-qml-gui = "linuxcue.qml_gui:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+linuxcue = ["qml/*.qml", "assets/devices/*"]

@@ -1,0 +1,14 @@
+* text=auto
+
+*.md text eol=lf
+*.py text eol=lf
+*.qml text eol=lf
+*.sh text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.rules text eol=lf
+*.desktop text eol=lf
+PKGBUILD text eol=lf
+*.install text eol=lf
+*.cueprofile text eol=lf
+LICENSE text eol=lf

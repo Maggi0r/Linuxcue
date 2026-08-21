@@ -1,0 +1,5 @@
+.linuxcue/
+.linuxcue-diff-*.json
+__pycache__/
+*.pyc
+.venv/

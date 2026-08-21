@@ -1,0 +1,14 @@
+{
+  "slug": "virtuoso-rgb-wireless-receiver",
+  "product_name": "Corsair Virtuoso RGB Wireless USB Receiver",
+  "vendor_id": 6940,
+  "product_id": 2630,
+  "transport": "wireless-receiver+hid",
+  "serial_number": "MOCK-VIRTUOSO-RECEIVER-001",
+  "interface_number": 1,
+  "notes": [
+    "Companion receiver for wireless Virtuoso SE operation",
+    "Link state and routing packets are prepared separately from the headset profile",
+    "Product id is based on the CachyOS VM hidapi discovery output"
+  ]
+}

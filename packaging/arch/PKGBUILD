@@ -1,0 +1,47 @@
+# Maintainer: linuxcue local build
+pkgname=linuxcue
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Linux-first Corsair control center for K95 RGB Platinum, M65 Pro RGB, and Virtuoso SE"
+arch=("any")
+url="https://github.com/djmag/linuxcue"
+license=("MIT")
+depends=(
+  "python"
+  "python-hidapi"
+  "python-pyusb"
+  "pyside6"
+  "qt6-declarative"
+  "easyeffects"
+  "lsp-plugins-lv2"
+)
+makedepends=("python-build" "python-installer" "python-wheel")
+optdepends=(
+  "tk: legacy Tk fallback GUI"
+  "calf: optional EasyEffects bass booster compatibility"
+)
+install="linuxcue.install"
+source=(
+  "linuxcue.desktop"
+  "99-linuxcue.rules"
+)
+sha256sums=("SKIP" "SKIP")
+
+_project_root="${startdir}/../.."
+
+build() {
+  cd "$_project_root"
+  rm -rf dist build src/*.egg-info
+  python -m build --wheel --no-isolation
+}
+
+package() {
+  cd "$_project_root"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+
+  install -Dm644 "packaging/arch/linuxcue.desktop" "$pkgdir/usr/share/applications/linuxcue.desktop"
+  install -Dm644 "packaging/arch/99-linuxcue.rules" "$pkgdir/usr/lib/udev/rules.d/99-linuxcue.rules"
+  install -Dm644 "README.md" "$pkgdir/usr/share/doc/linuxcue/README.md"
+  install -Dm644 "INSTALL-CACHYOS.md" "$pkgdir/usr/share/doc/linuxcue/INSTALL-CACHYOS.md"
+  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/linuxcue/LICENSE"
+}

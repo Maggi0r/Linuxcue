@@ -1,0 +1,13 @@
+post_install() {
+  echo "linuxcue installed."
+  echo "Reloading udev rules for Corsair HID access..."
+  udevadm control --reload-rules >/dev/null 2>&1 || true
+  udevadm trigger >/dev/null 2>&1 || true
+  echo "Detach and reconnect your Corsair USB devices if live write is not available yet."
+  echo "Start the GUI with: linuxcue qml-gui"
+  echo "Run a device check with: linuxcue doctor"
+}
+
+post_upgrade() {
+  post_install
+}

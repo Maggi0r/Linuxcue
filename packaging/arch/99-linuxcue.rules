@@ -1,0 +1,5 @@
+# Corsair devices used by linuxcue.
+# VM/dev rule: grants local users access to Corsair USB/HID endpoints.
+SUBSYSTEM=="hidraw", KERNEL=="hidraw*", ATTRS{idVendor}=="1b1c", TAG+="uaccess", MODE="0666"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1b1c", TAG+="uaccess", MODE="0666"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1b1c", TAG+="uaccess", MODE="0666"
