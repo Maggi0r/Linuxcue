@@ -8,8 +8,8 @@ if ! command -v pacman >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "Installing linuxcue build/runtime dependencies..."
-sudo pacman -S --needed \
+echo "Synchronizing CachyOS/Arch package database and installing linuxcue dependencies..."
+if ! sudo pacman -Syu --needed \
   base-devel \
   git \
   python \
@@ -22,7 +22,24 @@ sudo pacman -S --needed \
   pyside6 \
   qt6-declarative \
   easyeffects \
-  lsp-plugins-lv2
+  lsp-plugins-lv2; then
+  cat >&2 <<'EOF'
+
+Dependency installation failed before linuxcue was built.
+If pacman shows 404 errors, your mirror database is out of sync.
+Try this in the VM, then rerun this installer:
+
+  sudo pacman -Syyu
+  bash scripts/install-cachyos-package.sh
+
+If it still fails on CachyOS, refresh/rerank mirrors first:
+
+  sudo cachyos-rate-mirrors
+  sudo pacman -Syyu
+
+EOF
+  exit 1
+fi
 
 echo "Building linuxcue package..."
 cd "$repo_root/packaging/arch"
