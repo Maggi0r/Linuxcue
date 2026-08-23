@@ -17,7 +17,7 @@ usb = ["pyusb>=1.2.1"]
 
 [project.scripts]
 linuxcue = "linuxcue.cli:main"
-linuxcue-gui = "linuxcue.qt_gui:main"
+linuxcue-gui = "linuxcue.qml_gui:main"
 linuxcue-qml-gui = "linuxcue.qml_gui:main"
 
 [tool.setuptools]

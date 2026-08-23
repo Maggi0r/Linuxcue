@@ -196,15 +196,14 @@ The generated fixture files live in `fixtures/` and can later be replaced or ext
 
 ## GUI
 
-Start the legacy Qt Widgets GUI with `linuxcue gui`.
-
 Start the Qt Quick/QML dashboard with:
 
 ```bash
+linuxcue gui
 linuxcue qml-gui
 ```
 
-The QML dashboard is the new design path for an iCUE-like layout with compact
+The QML dashboard is the only supported design path for an iCUE-like layout with compact
 device cards, profile sidebar, keyboard preview, lighting layers, effect cards,
 quick zones, color controls, and the existing Python/HID backend underneath.
 

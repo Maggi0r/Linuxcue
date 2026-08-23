@@ -1,7 +1,7 @@
 # CachyOS VM Test Guide
 
 This project is packaged for CachyOS through the included Arch-style `PKGBUILD`.
-The package installs the CLI, the Tk GUI launcher, desktop entry, and udev rules
+The package installs the CLI, the QML dashboard launcher, desktop entry, and udev rules
 for Corsair HID access.
 
 ## One-Command Package Install
@@ -20,13 +20,6 @@ launcher on the new QML dashboard.
 
 ```bash
 sudo pacman -S --needed base-devel git python python-build python-installer python-setuptools python-wheel python-hidapi python-pyusb pyside6 qt6-declarative easyeffects lsp-plugins-lv2
-```
-
-If the GUI fails with `libtk8.6.so: cannot open shared object file`, install or
-repair the Tk runtime:
-
-```bash
-sudo pacman -S --needed tk tcl
 ```
 
 ## Build And Install

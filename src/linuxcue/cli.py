@@ -15,18 +15,6 @@ from .protocol_map import summarize_descriptor_capture
 from .service import LinuxCueService
 
 
-def tkinter_status() -> dict[str, object]:
-    try:
-        import tkinter  # noqa: F401
-    except Exception as exc:
-        return {
-            "available": False,
-            "error": str(exc),
-            "cachyos_fix": "sudo pacman -S --needed tk tcl",
-        }
-    return {"available": True}
-
-
 def qt_status() -> dict[str, object]:
     try:
         import PySide6  # noqa: F401
@@ -34,7 +22,7 @@ def qt_status() -> dict[str, object]:
         return {
             "available": False,
             "error": str(exc),
-            "cachyos_fix": "sudo pacman -S --needed pyside6",
+            "cachyos_fix": "sudo pacman -S --needed pyside6 qt6-declarative",
         }
     return {"available": True}
 
@@ -48,8 +36,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("doctor", help="Show runtime compatibility details.")
     subparsers.add_parser("vm-usb-doctor", help="Diagnose VirtualBox USB/HID passthrough for Corsair devices.")
-    subparsers.add_parser("gui", help="Launch the desktop control center.")
-    subparsers.add_parser("qml-gui", help="Launch the experimental Qt Quick/QML dashboard GUI.")
+    subparsers.add_parser("gui", help="Launch the QML dashboard GUI.")
+    subparsers.add_parser("qml-gui", help="Launch the Qt Quick/QML dashboard GUI.")
     check_update = subparsers.add_parser("check-update", help="Check GitHub releases and source commits for updates.")
     check_update.add_argument("--repo", default="Maggi0r/Linuxcue", help="GitHub repository in owner/name form.")
     install_update = subparsers.add_parser("install-update", help="Download the latest GitHub source and install the CachyOS package.")
@@ -217,12 +205,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     service = LinuxCueService()
 
-    if args.command == "gui":
-        from .qt_gui import main as gui_main
-
-        return gui_main()
-
-    if args.command == "qml-gui":
+    if args.command in {"gui", "qml-gui"}:
         from .qml_gui import main as qml_gui_main
 
         return qml_gui_main()
@@ -253,7 +236,6 @@ def main(argv: list[str] | None = None) -> int:
             "python": sys.version.split()[0],
             "linux": sys.platform.startswith("linux"),
             "qt": qt_status(),
-            "tkinter": tkinter_status(),
             "device_count": len(service.discover_devices()),
             "connected_devices": service.connected_device_summaries(),
             "virtualbox_usb": service.virtualbox_usb_diagnostics(),

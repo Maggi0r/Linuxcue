@@ -31,13 +31,9 @@ fi
 python -m pip install --upgrade pip
 python -m pip install -e "$repo_root[hid]"
 
-if ! python -c "import tkinter" >/dev/null 2>&1; then
-  echo "Warning: Tkinter/Tcl-Tk is not available."
-  echo "Install the GUI dependency on CachyOS with: sudo pacman -S --needed tk tcl"
-fi
 if ! python -c "import PySide6" >/dev/null 2>&1; then
   echo "Warning: PySide6/Qt is not available."
-  echo "Install the new GUI dependency on CachyOS with: sudo pacman -S --needed pyside6"
+  echo "Install the QML GUI dependency on CachyOS with: sudo pacman -S --needed pyside6 qt6-declarative"
   echo "Then rerun this installer."
 fi
 if command -v easyeffects >/dev/null 2>&1 && [ ! -d /usr/lib/lv2/lsp-plugins.lv2 ]; then
