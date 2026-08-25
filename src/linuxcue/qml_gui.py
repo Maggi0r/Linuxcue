@@ -112,6 +112,7 @@ if QT_QML_IMPORT_ERROR is None:
             self._m65_input_timer.setInterval(80)
             self._m65_input_timer.timeout.connect(self._poll_m65_dpi_input)
             self._copied_profile: dict[str, Any] | None = None
+            self._update_available = False
             self.updateStatusReady.connect(self._apply_update_status)
             self.statusReady.connect(self._apply_status)
             self.refresh()
@@ -184,6 +185,10 @@ if QT_QML_IMPORT_ERROR is None:
         @Property(str, notify=dataChanged)
         def status(self) -> str:
             return self._status
+
+        @Property(bool, notify=dataChanged)
+        def updateAvailable(self) -> bool:
+            return self._update_available
 
         @Slot(str)
         def setStatusMessage(self, message: str) -> None:
@@ -433,6 +438,7 @@ if QT_QML_IMPORT_ERROR is None:
         @Slot(str)
         def _apply_update_status(self, message: str) -> None:
             self._status = message
+            self._update_available = message.startswith("Update verfuegbar:")
             self.dataChanged.emit()
 
         @Slot(str)
@@ -454,7 +460,12 @@ if QT_QML_IMPORT_ERROR is None:
                 "linuxcue install-update --yes; "
                 "status=$?; echo; "
                 "if [ $status -eq 0 ]; then echo 'linuxcue Update abgeschlossen. Starte linuxcue neu...'; "
-                "nohup linuxcue qml-gui >/tmp/linuxcue-restart.log 2>&1 & exit 0; "
+                "launcher=$(command -v linuxcue || true); "
+                "if [ -z \"$launcher\" ]; then launcher=/usr/bin/linuxcue; fi; "
+                "if command -v setsid >/dev/null 2>&1; then "
+                "setsid bash -c 'sleep 2; exec \"$1\" qml-gui >/tmp/linuxcue-restart.log 2>&1 < /dev/null' _ \"$launcher\" >/dev/null 2>&1 & "
+                "else nohup bash -c 'sleep 2; exec \"$1\" qml-gui >/tmp/linuxcue-restart.log 2>&1 < /dev/null' _ \"$launcher\" >/dev/null 2>&1 & fi; "
+                "exit 0; "
                 "else echo 'linuxcue Update fehlgeschlagen.'; "
                 "read -r -p 'Enter zum Schliessen...'; exit $status; fi"
             )

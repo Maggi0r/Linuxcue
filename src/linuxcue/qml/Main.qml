@@ -121,16 +121,6 @@ ApplicationWindow {
         onTriggered: linuxcue.writeLive()
     }
 
-    Timer {
-        id: virtuosoEqLiveTimer
-        interval: 60
-        repeat: false
-        onTriggered: {
-            if (autoLiveWrite)
-                linuxcue.applyVirtuosoLinuxEq()
-        }
-    }
-
     Rectangle {
         anchors.fill: parent
         gradient: Gradient {
@@ -423,7 +413,33 @@ ApplicationWindow {
                 RowLayout {
                     Layout.fillWidth: true
                     Button { Layout.fillWidth: true; text: "Update pruefen"; onClicked: linuxcue.checkForUpdates() }
-                    Button { Layout.fillWidth: true; text: "Update installieren"; onClicked: linuxcue.installUpdate() }
+                    Button {
+                        id: installUpdateButton
+                        Layout.fillWidth: true
+                        text: linuxcue.updateAvailable ? "Update installieren" : "Kein Update"
+                        enabled: linuxcue.updateAvailable
+                        scale: 1.0
+                        onClicked: linuxcue.installUpdate()
+                        SequentialAnimation on scale {
+                            running: linuxcue.updateAvailable
+                            loops: Animation.Infinite
+                            NumberAnimation { to: 1.025; duration: 520; easing.type: Easing.InOutQuad }
+                            NumberAnimation { to: 1.0; duration: 520; easing.type: Easing.InOutQuad }
+                        }
+                        background: Rectangle {
+                            radius: 7
+                            color: linuxcue.updateAvailable ? "#d6ff28" : "#1f292d"
+                            border.width: linuxcue.updateAvailable ? 2 : 1
+                            border.color: linuxcue.updateAvailable ? "#f5ff00" : "#31444a"
+                        }
+                        contentItem: Text {
+                            text: installUpdateButton.text
+                            color: linuxcue.updateAvailable ? "#061010" : "#8fa4a8"
+                            font.bold: linuxcue.updateAvailable
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
                 }
 
                 Text {
@@ -1701,12 +1717,19 @@ ApplicationWindow {
                                             delegate: ColumnLayout {
                                                 Layout.fillHeight: true
                                                 spacing: 6
+                                                property int liveBandIndex: index
                                                 Text {
                                                     Layout.alignment: Qt.AlignHCenter
-                                                    text: modelData >= 0 ? "+" + modelData : "" + modelData
+                                                    text: Math.round(eqSlider.value) >= 0 ? "+" + Math.round(eqSlider.value) : "" + Math.round(eqSlider.value)
                                                     color: "#d7ff28"
                                                     font.bold: true
                                                     font.pixelSize: 13
+                                                }
+                                                Timer {
+                                                    id: eqSliderLiveTimer
+                                                    interval: 280
+                                                    repeat: false
+                                                    onTriggered: linuxcue.setVirtuosoBand(liveBandIndex, Math.round(eqSlider.value), autoLiveWrite)
                                                 }
                                                 Slider {
                                                     id: eqSlider
@@ -1718,12 +1741,13 @@ ApplicationWindow {
                                                     stepSize: 1
                                                     value: modelData
                                                     onMoved: {
-                                                        linuxcue.setVirtuosoBand(index, Math.round(value), false)
-                                                        virtuosoEqLiveTimer.restart()
+                                                        eqSliderLiveTimer.restart()
                                                     }
                                                     onPressedChanged: {
-                                                        if (!pressed)
-                                                            linuxcue.setVirtuosoBand(index, Math.round(value), autoLiveWrite)
+                                                        if (!pressed) {
+                                                            eqSliderLiveTimer.stop()
+                                                            linuxcue.setVirtuosoBand(liveBandIndex, Math.round(value), autoLiveWrite)
+                                                        }
                                                     }
                                                 }
                                                 Text {
