@@ -80,6 +80,7 @@ if QT_QML_IMPORT_ERROR is None:
     class LinuxCueQmlBridge(QObject):
         dataChanged = Signal()
         updateStatusReady = Signal(str)
+        statusReady = Signal(str)
 
         def __init__(self) -> None:
             super().__init__()
@@ -102,12 +103,16 @@ if QT_QML_IMPORT_ERROR is None:
             self._m65_dpi_presets: list[dict[str, Any]] = []
             self._m65_dpi_stages: list[dict[str, Any]] = []
             self._m65_previous_dpi_name = "stage1"
+            self._virtuoso_eq_apply_running = False
+            self._virtuoso_eq_apply_pending: str | None = None
+            self._virtuoso_eq_apply_lock = threading.Lock()
             self._m65_dpi_monitor = M65DpiInputMonitor()
             self._m65_input_timer = QTimer(self)
             self._m65_input_timer.setInterval(80)
             self._m65_input_timer.timeout.connect(self._poll_m65_dpi_input)
             self._copied_profile: dict[str, Any] | None = None
             self.updateStatusReady.connect(self._apply_update_status)
+            self.statusReady.connect(self._apply_status)
             self.refresh()
             QTimer.singleShot(4500, self.checkForUpdates)
 
@@ -426,6 +431,11 @@ if QT_QML_IMPORT_ERROR is None:
 
         @Slot(str)
         def _apply_update_status(self, message: str) -> None:
+            self._status = message
+            self.dataChanged.emit()
+
+        @Slot(str)
+        def _apply_status(self, message: str) -> None:
             self._status = message
             self.dataChanged.emit()
 
@@ -1032,7 +1042,9 @@ if QT_QML_IMPORT_ERROR is None:
             connected_slugs = self._connected_slugs(status)
             profile_slugs = self._current_profile_device_slugs()
             cards: list[dict[str, Any]] = []
-            virtuoso_wireless = any(self._is_virtuoso_wireless_device(device) for device in status.get("devices", []))
+            virtuoso_wireless = self._virtuoso_wireless_connected(status)
+            if virtuoso_wireless:
+                connected_slugs.add("virtuoso-se")
             for slug in ["k95", "m65", "virtuoso-se", "receiver"]:
                 if slug not in profile_slugs or slug not in connected_slugs:
                     continue
@@ -1042,6 +1054,7 @@ if QT_QML_IMPORT_ERROR is None:
                     image_source = "../assets/devices/m65-card.png"
                 if slug == "virtuoso-se":
                     image_source = "../assets/devices/virtuoso-wireless-card.png" if virtuoso_wireless else "../assets/devices/virtuoso-usb-card.png"
+                    meta = "Wireless Link: 2.4 GHz" if virtuoso_wireless else "USB Link: kabelgebunden"
                 cards.append(
                     {
                         "slug": slug,
@@ -1051,6 +1064,7 @@ if QT_QML_IMPORT_ERROR is None:
                         "state": "online",
                         "selected": slug == self._current_device,
                         "imageSource": image_source,
+                        "wireless": virtuoso_wireless if slug == "virtuoso-se" else False,
                     }
                 )
             return cards
@@ -1087,19 +1101,55 @@ if QT_QML_IMPORT_ERROR is None:
                     slugs.add("virtuoso-se")
             return slugs
 
+        def _virtuoso_wireless_connected(self, status: dict[str, Any]) -> bool:
+            if any(self._is_virtuoso_wireless_device(device) for device in status.get("devices", [])):
+                return True
+            try:
+                usb_devices = self.service.discover_usb_devices()
+            except Exception:
+                return False
+            return any(
+                self._is_virtuoso_wireless_device(
+                    {
+                        "product": device.product_name,
+                        "product_id": f"0x{device.product_id:04x}",
+                        "target": device.support.model_hint,
+                        "family": device.support.family,
+                        "transport": device.transport,
+                        "endpoint_role": self.service.endpoint_role(device),
+                        "path": device.path,
+                    }
+                )
+                for device in usb_devices
+            )
+
         @staticmethod
         def _is_virtuoso_wireless_device(device: dict[str, Any]) -> bool:
             text = " ".join(
                 str(device.get(key, ""))
-                for key in ("target", "product", "family", "transport", "endpoint_role")
+                for key in ("target", "product", "family", "transport", "endpoint_role", "path")
             ).casefold()
-            product_id = str(device.get("product_id", "")).casefold()
+            product_id = LinuxCueQmlBridge._normalized_hex_id(device.get("product_id"))
             return (
                 product_id == "0x0a46"
                 or "wireless-receiver" in text
                 or "wireless receiver" in text
                 or ("receiver" in text and "virtuoso" in text)
             )
+
+        @staticmethod
+        def _normalized_hex_id(value: Any) -> str:
+            if isinstance(value, int):
+                return f"0x{value:04x}"
+            text = str(value or "").strip().casefold()
+            try:
+                if text.startswith("0x"):
+                    return f"0x{int(text, 16):04x}"
+                if text.isdigit():
+                    return f"0x{int(text, 10):04x}"
+            except ValueError:
+                return text
+            return text
 
         def _current_profile_device_slugs(self) -> set[str]:
             profile = self.service.load_profile(self._current_profile)
@@ -1186,11 +1236,29 @@ if QT_QML_IMPORT_ERROR is None:
             return zone
 
         def _apply_virtuoso_eq(self, profile_name: str) -> None:
+            with self._virtuoso_eq_apply_lock:
+                if self._virtuoso_eq_apply_running:
+                    self._virtuoso_eq_apply_pending = profile_name
+                    return
+                self._virtuoso_eq_apply_running = True
+            thread = threading.Thread(target=self._apply_virtuoso_eq_worker, args=(profile_name,), daemon=True)
+            thread.start()
+
+        def _apply_virtuoso_eq_worker(self, profile_name: str) -> None:
             try:
                 result = self.service.apply_virtuoso_easyeffects(profile_name)
-                self._status = f"Virtuoso Linux EQ aktiv: {result.get('preset', 'Preset')}"
+                self.statusReady.emit(f"Virtuoso Linux EQ aktiv: {result.get('preset', 'Preset')}")
             except Exception as exc:
-                self._status = f"Virtuoso Linux EQ fehlgeschlagen: {exc}"
+                self.statusReady.emit(f"Virtuoso Linux EQ fehlgeschlagen: {exc}")
+            next_profile: str | None = None
+            with self._virtuoso_eq_apply_lock:
+                if self._virtuoso_eq_apply_pending:
+                    next_profile = self._virtuoso_eq_apply_pending
+                    self._virtuoso_eq_apply_pending = None
+                else:
+                    self._virtuoso_eq_apply_running = False
+            if next_profile is not None:
+                self._apply_virtuoso_eq_worker(next_profile)
 
         def _refresh_m65_state(self) -> None:
             profile = self._active_profile_for_target("m65")

@@ -14,10 +14,16 @@ def export_virtuoso_easyeffects_presets(profile: Profile, root: Path | None = No
     target_root.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
     for preset in profile.audio:
-        path = target_root / f"{preset_export_name(profile, preset)}.json"
-        path.write_text(json.dumps(_preset_payload(preset), indent=2), encoding="utf-8")
-        written.append(path)
+        written.append(export_virtuoso_easyeffects_preset(profile, preset, target_root))
     return written
+
+
+def export_virtuoso_easyeffects_preset(profile: Profile, preset: AudioPreset, root: Path | None = None) -> Path:
+    target_root = root or Path.home() / ".config" / "easyeffects" / "output"
+    target_root.mkdir(parents=True, exist_ok=True)
+    path = target_root / f"{preset_export_name(profile, preset)}.json"
+    path.write_text(json.dumps(_preset_payload(preset), indent=2), encoding="utf-8")
+    return path
 
 
 def preset_export_name(profile: Profile, preset: AudioPreset) -> str:

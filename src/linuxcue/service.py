@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .device_manager import DeviceManager
-from .easyeffects_export import export_virtuoso_easyeffects_presets, preset_export_name
+from .easyeffects_export import export_virtuoso_easyeffects_preset, export_virtuoso_easyeffects_presets, preset_export_name
 from .icue_importer import import_icue_profile, profiles_from_icue
 from .k95_backend import (
     build_k95_default_profile,
@@ -648,22 +648,26 @@ class LinuxCueService:
             raise RuntimeError(f"Profile not found: {name}")
         if profile.target_device != "virtuoso-se":
             raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
-        paths = export_virtuoso_easyeffects_presets(profile)
         selected = self._selected_audio_preset(profile, preset_name)
+        path = export_virtuoso_easyeffects_preset(profile, selected)
         exported_name = preset_export_name(profile, selected)
-        hide = subprocess.run([binary, "--hide-window"], check=False, capture_output=True, text=True, timeout=8)
         load = subprocess.run([binary, "--load-preset", exported_name], check=False, capture_output=True, text=True, timeout=8)
+        hide_stderr = ""
+        if load.returncode != 0:
+            hide = subprocess.run([binary, "--hide-window"], check=False, capture_output=True, text=True, timeout=8)
+            hide_stderr = hide.stderr
+            load = subprocess.run([binary, "--load-preset", exported_name], check=False, capture_output=True, text=True, timeout=8)
         if load.returncode != 0:
             raise RuntimeError(
                 "EasyEffects could not load the exported preset. "
-                f"Preset: {exported_name}. stderr: {(load.stderr or hide.stderr).strip()}"
+                f"Preset: {exported_name}. stderr: {(load.stderr or hide_stderr).strip()}"
             )
         return {
             "profile": name,
             "preset": selected.name,
             "easyeffects_preset": exported_name,
-            "exported_count": len(paths),
-            "paths": [str(path) for path in paths],
+            "exported_count": 1,
+            "paths": [str(path)],
             "backend": "EasyEffects/PipeWire",
             "visible_second_gui_required": False,
         }

@@ -9,6 +9,7 @@ Rectangle {
     property string state: ""
     property string slug: ""
     property string imageSource: ""
+    property bool wireless: false
     property bool selected: false
     signal clicked()
 
@@ -86,6 +87,23 @@ Rectangle {
                 ctx.moveTo(width / 2 + 27, height / 2 + 22)
                 ctx.lineTo(width / 2 + 52, height / 2 + 29)
                 ctx.stroke()
+                if (wireless) {
+                    ctx.strokeStyle = "#c7d4d6"
+                    ctx.lineWidth = 2
+                    for (var i = 0; i < 3; i++) {
+                        ctx.beginPath()
+                        ctx.arc(width / 2 + 44, height / 2 - 18, 7 + i * 7, Math.PI * 1.15, Math.PI * 1.85)
+                        ctx.stroke()
+                    }
+                } else {
+                    ctx.strokeStyle = "#c7d4d6"
+                    ctx.lineWidth = 2
+                    ctx.beginPath()
+                    ctx.moveTo(width / 2 + 44, height / 2 - 30)
+                    ctx.lineTo(width / 2 + 44, height / 2 - 12)
+                    ctx.stroke()
+                    ctx.fillRect(width / 2 + 39, height / 2 - 42, 10, 10)
+                }
             } else {
                 roundRect(ctx, width / 2 - 16, 8, 32, height - 20, 6)
                 ctx.fill()

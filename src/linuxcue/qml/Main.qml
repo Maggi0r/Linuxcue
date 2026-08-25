@@ -123,7 +123,7 @@ ApplicationWindow {
 
     Timer {
         id: virtuosoEqLiveTimer
-        interval: 180
+        interval: 60
         repeat: false
         onTriggered: {
             if (autoLiveWrite)
@@ -459,6 +459,7 @@ ApplicationWindow {
                         selected: modelData.slug === linuxcue.currentDevice
                         slug: modelData.slug
                         imageSource: modelData.imageSource === undefined ? "" : modelData.imageSource
+                        wireless: modelData.wireless === true
                         onClicked: linuxcue.selectDevice(modelData.slug)
                     }
                 }
