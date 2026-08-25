@@ -552,6 +552,14 @@ ApplicationWindow {
                                         selected: modelData.selected
                                         onClicked: function(layerId) {
                                             linuxcue.selectLightingLayer(layerId)
+                                            selectedColor = modelData.color
+                                            k95SelectedQuickZone = modelData.zone
+                                            k95SelectedKeys = modelData.keys
+                                            k95SelectedKey = modelData.keys.length === 1 ? modelData.keys[0] : ""
+                                            k95HasSelection = modelData.keys.length > 0
+                                            showK95EffectPicker = modelData.keys.length > 0
+                                            k95SelectedEffect = modelData.keys.length > 0 ? "Statische Farbe" : ""
+                                            k95KeyboardPreview.setSelection(modelData.keys)
                                         }
                                         onRightClicked: function(layerId, title) {
                                             contextLayerId = layerId

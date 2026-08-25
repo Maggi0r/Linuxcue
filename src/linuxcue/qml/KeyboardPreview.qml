@@ -413,6 +413,15 @@ Item {
         overlay.requestPaint()
     }
 
+    function setSelection(keys) {
+        selectedKeys = keys === undefined ? [] : keys.slice()
+        selectedKey = selectedKeys.length === 1 ? selectedKeys[0] : ""
+        dragging = false
+        selectionRect = { "x": 0, "y": 0, "w": 0, "h": 0 }
+        selectionChanged(selectedKeys)
+        overlay.requestPaint()
+    }
+
     function normalizedRect(x1, y1, x2, y2) {
         return {
             "x": Math.min(x1, x2),

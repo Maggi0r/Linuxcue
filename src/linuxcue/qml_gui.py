@@ -1548,8 +1548,24 @@ if QT_QML_IMPORT_ERROR is None:
                     return layers
             color = self._first_k95_color(profile)
             layers = [
-                {"id": "static-color", "title": "Statische Farbe", "color": color, "zone": "all", "selected": True, "profile": profile.name},
-                {"id": "color-shift", "title": "Farbwechsel", "color": "#1ecfdf", "zone": "all", "selected": False, "profile": profile.name},
+                {
+                    "id": "static-color",
+                    "title": "Statische Farbe",
+                    "color": color,
+                    "zone": "all",
+                    "keys": self._k95_quick_zone_keys("all"),
+                    "selected": True,
+                    "profile": profile.name,
+                },
+                {
+                    "id": "color-shift",
+                    "title": "Farbwechsel",
+                    "color": "#1ecfdf",
+                    "zone": "all",
+                    "keys": self._k95_quick_zone_keys("all"),
+                    "selected": False,
+                    "profile": profile.name,
+                },
             ]
             profile.options["lighting_layers"] = layers
             self.service.save_profile(profile)
@@ -1560,11 +1576,13 @@ if QT_QML_IMPORT_ERROR is None:
             return not owner or owner == profile_name
 
         def _normalise_lighting_layer(self, item: dict[str, Any], index: int, profile_name: str) -> dict[str, Any]:
+            zone = str(item.get("zone") or "all")
             return {
                 "id": str(item.get("id") or f"layer-{index + 1}"),
                 "title": str(item.get("title") or "Beleuchtungsschicht"),
                 "color": str(item.get("color") or "#04ff00"),
-                "zone": str(item.get("zone") or "all"),
+                "zone": zone,
+                "keys": self._k95_quick_zone_keys(zone),
                 "selected": bool(item.get("selected", index == 0)),
                 "profile": profile_name,
             }
@@ -1590,6 +1608,7 @@ if QT_QML_IMPORT_ERROR is None:
                     "title": self._lighting_layer_title_for_zone(clean_zone),
                     "color": color,
                     "zone": clean_zone,
+                    "keys": self._k95_quick_zone_keys(clean_zone),
                     "selected": True,
                     "profile": profile.name,
                 }
@@ -1598,6 +1617,7 @@ if QT_QML_IMPORT_ERROR is None:
                 layer["selected"] = layer is target
             target["color"] = color
             target["zone"] = clean_zone
+            target["keys"] = self._k95_quick_zone_keys(clean_zone)
             target["title"] = self._lighting_layer_title_for_zone(clean_zone)
             target["profile"] = profile.name
             profile.options["lighting_layers"] = layers
@@ -1627,6 +1647,7 @@ if QT_QML_IMPORT_ERROR is None:
                 current_keys = list(K95_OPENRGB_ZONE_ORDER)
             merged = list(dict.fromkeys([*current_keys, *keys])) if add else [key for key in current_keys if key not in set(keys)]
             layer["zone"] = self._zone_for_keys(merged)
+            layer["keys"] = self._k95_quick_zone_keys(str(layer["zone"]))
             layer["title"] = self._lighting_layer_title_for_zone(str(layer["zone"]))
             layer["profile"] = profile.name
             for item in layers:
