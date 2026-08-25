@@ -52,7 +52,7 @@ if [[ -z "${pkg_file}" ]]; then
 fi
 
 echo "Installing ${pkg_file}..."
-sudo pacman -U --needed "$pkg_file"
+sudo pacman -U --noconfirm "$pkg_file"
 
 echo "Reloading udev rules..."
 sudo udevadm control --reload-rules || true
