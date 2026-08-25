@@ -684,6 +684,14 @@ if QT_QML_IMPORT_ERROR is None:
         def removeK95SelectionFromLayer(self, zone: str, live: bool = True) -> None:
             self._modify_k95_layer_keys(zone, add=False, live=live)
 
+        @Slot(str, str, bool)
+        def setK95LightingLayerKeys(self, layer_id: str, zone: str, live: bool = True) -> None:
+            self._set_k95_layer_keys(layer_id, zone, live=live)
+
+        @Slot(str, str, bool)
+        def setK95LightingLayerColor(self, layer_id: str, color: str, live: bool = True) -> None:
+            self._set_k95_layer_color(layer_id, color, live=live)
+
         @Slot()
         def k95HardwareMode(self) -> None:
             try:
@@ -1652,13 +1660,58 @@ if QT_QML_IMPORT_ERROR is None:
             layer["profile"] = profile.name
             for item in layers:
                 item["selected"] = item is layer
+            action = "hinzugefuegt" if add else "entfernt"
+            self._store_k95_layers(profile, layers, live=live, status_prefix=f"{len(keys)} Tasten zur aktiven Schicht {action}.")
+
+        def _set_k95_layer_keys(self, layer_id: str, zone: str, *, live: bool) -> None:
+            profile = self._active_profile_for_target("k95")
+            if profile is None:
+                self._status = "Kein K95-Profil aktiv."
+                self.dataChanged.emit()
+                return
+            layers = self._lighting_layer_store(profile)
+            layer = self._lighting_layer_by_id(layers, layer_id)
+            if layer is None:
+                self._status = "Beleuchtungsschicht nicht gefunden."
+                self.dataChanged.emit()
+                return
+            keys = self._k95_quick_zone_keys(zone)
+            layer["zone"] = self._zone_for_keys(keys)
+            layer["keys"] = keys
+            layer["title"] = self._lighting_layer_title_for_zone(str(layer["zone"]))
+            layer["profile"] = profile.name
+            for item in layers:
+                item["selected"] = item is layer
+            self._store_k95_layers(profile, layers, live=live, status_prefix=f"Schicht aktualisiert: {len(keys)} Tasten.")
+
+        def _set_k95_layer_color(self, layer_id: str, color: str, *, live: bool) -> None:
+            profile = self._active_profile_for_target("k95")
+            if profile is None:
+                self._status = "Kein K95-Profil aktiv."
+                self.dataChanged.emit()
+                return
+            layers = self._lighting_layer_store(profile)
+            layer = self._lighting_layer_by_id(layers, layer_id)
+            if layer is None:
+                self._status = "Beleuchtungsschicht nicht gefunden."
+                self.dataChanged.emit()
+                return
+            layer["color"] = color
+            layer["profile"] = profile.name
+            for item in layers:
+                item["selected"] = item is layer
+            self._store_k95_layers(profile, layers, live=live, status_prefix=f"Schichtfarbe gespeichert: {color}.")
+
+        def _lighting_layer_by_id(self, layers: list[dict[str, Any]], layer_id: str) -> dict[str, Any] | None:
+            return next((layer for layer in layers if str(layer.get("id")) == layer_id), None)
+
+        def _store_k95_layers(self, profile: Profile, layers: list[dict[str, Any]], *, live: bool, status_prefix: str) -> None:
             self._apply_lighting_layers_to_profile(profile, layers)
             profile.options["lighting_layers"] = layers
             self.service.save_profile(profile)
             self._lighting_layers = layers
             self._k95_key_colors = self._k95_key_color_map(profile)
-            action = "hinzugefuegt" if add else "entfernt"
-            self._status = f"{len(keys)} Tasten zur aktiven Schicht {action}."
+            self._status = status_prefix
             if live:
                 try:
                     result = self.service.write_k95_profile_live(profile.name)

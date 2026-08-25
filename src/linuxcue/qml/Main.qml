@@ -33,6 +33,7 @@ ApplicationWindow {
     property string k95SelectedKey: ""
     property var k95SelectedKeys: []
     property bool k95HasSelection: false
+    property string k95EditingLayerId: ""
     property string k95Section: "lighting"
     property string m65Section: "lighting"
     property string m65SelectedZone: "all"
@@ -51,6 +52,7 @@ ApplicationWindow {
         k95HasSelection = false
         showK95EffectPicker = false
         k95SelectedEffect = ""
+        k95EditingLayerId = ""
     }
 
     function resetDeviceViews() {
@@ -552,6 +554,7 @@ ApplicationWindow {
                                         selected: modelData.selected
                                         onClicked: function(layerId) {
                                             linuxcue.selectLightingLayer(layerId)
+                                            k95EditingLayerId = layerId
                                             selectedColor = modelData.color
                                             k95SelectedQuickZone = modelData.zone
                                             k95SelectedKeys = modelData.keys
@@ -559,7 +562,7 @@ ApplicationWindow {
                                             k95HasSelection = modelData.keys.length > 0
                                             showK95EffectPicker = modelData.keys.length > 0
                                             k95SelectedEffect = modelData.keys.length > 0 ? "Statische Farbe" : ""
-                                            k95KeyboardPreview.setSelection(modelData.keys)
+                                            k95KeyboardPreview.setSelection(modelData.keys, false)
                                         }
                                         onRightClicked: function(layerId, title) {
                                             contextLayerId = layerId
@@ -630,7 +633,10 @@ ApplicationWindow {
                             MouseArea {
                                 anchors.fill: parent
                                 acceptedButtons: Qt.LeftButton
-                                onClicked: clearK95Selection()
+                                onClicked: {
+                                    clearK95Selection()
+                                    k95KeyboardPreview.clearSelection()
+                                }
                             }
 
                             Text {
@@ -691,6 +697,10 @@ ApplicationWindow {
                                     k95HasSelection = keys.length > 0
                                     showK95EffectPicker = keys.length > 0
                                     k95SelectedEffect = keys.length > 0 ? "Statische Farbe" : ""
+                                    if (k95EditingLayerId !== "" && keys.length > 0)
+                                        linuxcue.setK95LightingLayerKeys(k95EditingLayerId, k95SelectedQuickZone, autoLiveWrite)
+                                    if (keys.length === 0)
+                                        k95EditingLayerId = ""
                                 }
                             }
                         }
@@ -749,7 +759,10 @@ ApplicationWindow {
                                     currentColor: selectedColor
                                     onColorPicked: {
                                         selectedColor = color
-                                        linuxcue.applyK95ColorToZone(k95SelectedQuickZone, color, autoLiveWrite)
+                                        if (k95EditingLayerId !== "")
+                                            linuxcue.setK95LightingLayerColor(k95EditingLayerId, color, autoLiveWrite)
+                                        else
+                                            linuxcue.applyK95ColorToZone(k95SelectedQuickZone, color, autoLiveWrite)
                                     }
                                 }
                             }
