@@ -43,13 +43,17 @@ class ProfileStore:
         if not path.exists():
             return None
         payload = json.loads(path.read_text(encoding="utf-8"))
-        lighting = [LightingZone(**zone) for zone in payload.get("lighting", [])]
-        dpi = [DpiStage(**stage) for stage in payload.get("dpi", [])]
-        audio = [AudioPreset(**preset) for preset in payload.get("audio", [])]
-        headset = HeadsetSetting(**payload.get("headset", {}))
-        cooling = [CoolingChannel(**channel) for channel in payload.get("cooling", [])]
+        if not isinstance(payload, dict):
+            return None
+        lighting = [LightingZone(**zone) for zone in payload.get("lighting", []) if isinstance(zone, dict)]
+        dpi = [DpiStage(**stage) for stage in payload.get("dpi", []) if isinstance(stage, dict)]
+        audio = [AudioPreset(**preset) for preset in payload.get("audio", []) if isinstance(preset, dict)]
+        headset_payload = payload.get("headset", {})
+        headset = HeadsetSetting(**headset_payload) if isinstance(headset_payload, dict) else HeadsetSetting()
+        cooling = [CoolingChannel(**channel) for channel in payload.get("cooling", []) if isinstance(channel, dict)]
+        profile_name = str(payload.get("name") or path.stem)
         return Profile(
-            name=payload["name"],
+            name=profile_name,
             target_device=payload.get("target_device", "generic"),
             target_family=payload.get("target_family", "generic"),
             profile_group=payload.get("profile_group", ""),
