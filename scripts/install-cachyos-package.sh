@@ -19,6 +19,9 @@ if ! sudo pacman -Syu --needed \
   python-wheel \
   python-hidapi \
   python-pyusb \
+  pipewire \
+  pipewire-pulse \
+  wireplumber \
   pyside6 \
   qt6-declarative \
   easyeffects \

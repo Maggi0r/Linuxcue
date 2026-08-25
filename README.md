@@ -102,8 +102,21 @@ For each capture pair, change exactly one iCUE setting. Good first captures are:
 
 The Virtuoso USB HID endpoint can accept linuxcue test frames, but current EQ
 frames are not observed to change the headset state. Treat Virtuoso HID EQ as
-experimental. For a reliable Linux EQ path, linuxcue can drive EasyEffects as a
-hidden PipeWire backend:
+experimental. linuxcue therefore offers two Linux EQ paths: a native PipeWire
+filter-chain managed by linuxcue, and EasyEffects as a compatibility fallback.
+
+Native PipeWire EQ:
+
+```bash
+linuxcue repair-virtuoso-presets "PUBG-virtuoso"
+linuxcue apply-virtuoso-pipewire-eq "PUBG-virtuoso"
+```
+
+This writes `~/.config/pipewire/pipewire.conf.d/90-linuxcue-virtuoso-eq.conf`
+and restarts the user PipeWire services. If the audio is not routed
+automatically, select the virtual sink `linuxcue Virtuoso EQ` as output.
+
+EasyEffects fallback:
 
 ```bash
 sudo pacman -S --needed easyeffects lsp-plugins-lv2
@@ -131,11 +144,12 @@ bash scripts/install-cachyos-package.sh
 ```
 
 This installs the required runtime pieces for the QML dashboard, HID access, and
-Virtuoso EQ through EasyEffects/PipeWire:
+Virtuoso EQ through PipeWire/EasyEffects:
 
 - `pyside6` and `qt6-declarative` for the Qt Quick/QML GUI
 - `python-hidapi` and `python-pyusb` for Corsair HID/USB access
-- `easyeffects` and `lsp-plugins-lv2` for Virtuoso Linux EQ profiles
+- `pipewire`, `pipewire-pulse`, and `wireplumber` for native Virtuoso EQ routing
+- `easyeffects` and `lsp-plugins-lv2` for the Virtuoso EQ fallback path
 - `git` for GitHub-based update checks and self-updates
 - `base-devel`, `python-build`, `python-installer`, `python-setuptools`, and `python-wheel` for local package builds
 

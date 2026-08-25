@@ -1788,6 +1788,7 @@ ApplicationWindow {
                                     }
                                     Button { Layout.fillWidth: true; text: "Flat EQ"; onClicked: linuxcue.applyVirtuosoFlatEq() }
                                     Button { Layout.fillWidth: true; text: "Apply Linux EQ"; highlighted: true; onClicked: linuxcue.applyVirtuosoLinuxEq() }
+                                    Button { Layout.fillWidth: true; text: "Native PipeWire EQ"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
                                     Rectangle {
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 86
@@ -1797,7 +1798,7 @@ ApplicationWindow {
                                         Text {
                                             anchors.fill: parent
                                             anchors.margins: 12
-                                            text: "EasyEffects wird direkt aus linuxcue gesteuert. RGB ist gespeichert, aber am Virtuoso weiter capture-abhaengig."
+                                            text: "EasyEffects bleibt als Live-Fallback. Native PipeWire EQ erstellt eine linuxcue Filter-Chain ohne EasyEffects-GUI."
                                             color: "#d7edf0"
                                             wrapMode: Text.WordWrap
                                             font.pixelSize: 12

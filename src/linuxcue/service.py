@@ -31,6 +31,7 @@ from .virtuoso_backend import (
 )
 from .known_devices import TARGET_DEVICES, known_device_by_slug, mock_probe_for_slug, support_for_product
 from .models import Device, ProbeData, Profile
+from .pipewire_eq import restart_pipewire_user_services, write_virtuoso_pipewire_eq
 from .profile_store import ProfileStore
 from .probe_store import ProbeStore
 from .protocol_map import all_capability_maps, capability_map_for_slug
@@ -670,6 +671,38 @@ class LinuxCueService:
             "paths": [str(path)],
             "backend": "EasyEffects/PipeWire",
             "visible_second_gui_required": False,
+        }
+
+    def apply_virtuoso_pipewire_eq(self, name: str, preset_name: str | None = None, restart: bool = True) -> dict[str, object]:
+        if not sys.platform.startswith("linux"):
+            raise RuntimeError("Native PipeWire EQ is only supported on Linux/PipeWire.")
+        if shutil.which("pipewire") is None:
+            raise RuntimeError("PipeWire was not found.")
+        profile = self.load_profile(name)
+        if profile is None:
+            raise RuntimeError(f"Profile not found: {name}")
+        if profile.target_device != "virtuoso-se":
+            raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
+        selected = self._selected_audio_preset(profile, preset_name)
+        path = write_virtuoso_pipewire_eq(profile, selected)
+        reload_result: dict[str, object] | None = None
+        if restart:
+            if shutil.which("systemctl") is None:
+                raise RuntimeError("systemctl was not found. PipeWire config was written, but PipeWire must be restarted manually.")
+            reload_result = restart_pipewire_user_services()
+            if not reload_result.get("ok"):
+                raise RuntimeError(
+                    "PipeWire config was written, but restarting PipeWire failed. "
+                    f"stderr: {reload_result.get('stderr', '')}"
+                )
+        return {
+            "profile": name,
+            "preset": selected.name,
+            "backend": "PipeWire filter-chain",
+            "config": str(path),
+            "restart": restart,
+            "reload": reload_result,
+            "note": "Select the virtual sink 'linuxcue Virtuoso EQ' as output if WirePlumber does not route it automatically.",
         }
 
     def easyeffects_doctor(self) -> dict[str, object]:

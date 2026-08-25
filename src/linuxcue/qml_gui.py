@@ -1030,6 +1030,20 @@ if QT_QML_IMPORT_ERROR is None:
             self._apply_virtuoso_eq(profile.name)
             self.dataChanged.emit()
 
+        @Slot()
+        def applyVirtuosoPipeWireEq(self) -> None:
+            profile = self._active_profile_for_target("virtuoso-se")
+            if profile is None:
+                self._status = "Kein Virtuoso-Profil aktiv."
+                self.dataChanged.emit()
+                return
+            try:
+                result = self.service.apply_virtuoso_pipewire_eq(profile.name)
+                self._status = f"Native PipeWire EQ aktiv: {result.get('preset', 'Preset')}"
+            except Exception as exc:
+                self._status = f"Native PipeWire EQ fehlgeschlagen: {exc}"
+            self.dataChanged.emit()
+
         def _profile_subtitle(self, item: dict[str, object]) -> str:
             target = str(item.get("target_device", ""))
             group_role = str(item.get("group_role") or item.get("target_family") or "")
