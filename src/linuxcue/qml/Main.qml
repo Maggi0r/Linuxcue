@@ -55,6 +55,8 @@ ApplicationWindow {
 
     function resetDeviceViews() {
         clearK95Selection()
+        if (typeof k95KeyboardPreview !== "undefined")
+            k95KeyboardPreview.clearSelection()
         k95Section = "lighting"
         m65Section = "lighting"
         m65SelectedZone = "all"
@@ -512,6 +514,7 @@ ApplicationWindow {
                                     onClicked: {
                                         linuxcue.addLightingLayer("Statische Farbe")
                                         clearK95Selection()
+                                        k95KeyboardPreview.clearSelection()
                                     }
                                     contentItem: Text {
                                         text: parent.text
@@ -647,6 +650,7 @@ ApplicationWindow {
                             }
 
                             KeyboardPreview {
+                                id: k95KeyboardPreview
                                 z: 2
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 anchors.verticalCenter: parent.verticalCenter
