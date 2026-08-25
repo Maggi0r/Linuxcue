@@ -23,6 +23,24 @@ Column {
             anchors.verticalCenter: parent.verticalCenter
             font.pixelSize: 14
         }
+        Button {
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Keine Farbe"
+            onClicked: panel.colorPicked("#000000")
+            contentItem: Text {
+                text: parent.text
+                color: "#d7edf0"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                font.pixelSize: 12
+                font.bold: true
+            }
+            background: Rectangle {
+                radius: 8
+                color: "#101719"
+                border.color: "#35505a"
+            }
+        }
     }
 
     Canvas {

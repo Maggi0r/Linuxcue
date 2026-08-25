@@ -232,6 +232,7 @@ ApplicationWindow {
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
                             onClicked: function(mouse) {
                                 if (mouse.button === Qt.LeftButton) {
+                                    clearK95Selection()
                                     linuxcue.selectProfile(modelData.name)
                                     if (autoLiveWrite)
                                         profileLiveWriteTimer.restart()
