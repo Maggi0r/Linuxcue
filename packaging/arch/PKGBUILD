@@ -48,6 +48,7 @@ package() {
   python -m installer --destdir="$pkgdir" dist/*.whl
 
   install -Dm644 "packaging/arch/linuxcue.desktop" "$pkgdir/usr/share/applications/linuxcue.desktop"
+  install -Dm644 "src/linuxcue/assets/icons/linuxcue.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/linuxcue.svg"
   install -Dm644 "packaging/arch/99-linuxcue.rules" "$pkgdir/usr/lib/udev/rules.d/99-linuxcue.rules"
   install -Dm644 "README.md" "$pkgdir/usr/share/doc/linuxcue/README.md"
   install -Dm644 "INSTALL-CACHYOS.md" "$pkgdir/usr/share/doc/linuxcue/INSTALL-CACHYOS.md"

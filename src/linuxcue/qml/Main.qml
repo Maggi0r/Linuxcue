@@ -39,6 +39,7 @@ ApplicationWindow {
     property string m65SelectedColor: "#04ff00"
     property string virtuosoSection: "lighting"
     property string pendingLiveWriteProfile: ""
+    property bool contextProfileProtected: false
     property bool showK95Dashboard: linuxcue.currentDevice === "k95"
     property bool showM65Dashboard: linuxcue.currentDevice === "m65"
     property bool showVirtuosoDashboard: linuxcue.currentDevice === "virtuoso-se"
@@ -236,6 +237,7 @@ ApplicationWindow {
                                         profileLiveWriteTimer.restart()
                                 } else {
                                     contextProfileName = modelData.name
+                                    contextProfileProtected = Boolean(modelData.protected)
                                     profileItemMenu.popup()
                                 }
                             }
@@ -256,7 +258,11 @@ ApplicationWindow {
                     MenuItem { text: "Kopie erstellen"; onTriggered: linuxcue.duplicateProfile(contextProfileName) }
                     MenuItem { text: "Profil exportieren"; onTriggered: exportDialog.open() }
                     MenuSeparator {}
-                    MenuItem { text: "Profil loeschen"; onTriggered: deleteConfirm.open() }
+                    MenuItem {
+                        text: contextProfileProtected ? "Standardprofil ist geschuetzt" : "Profil loeschen"
+                        enabled: !contextProfileProtected
+                        onTriggered: deleteConfirm.open()
+                    }
                 }
 
                 Dialog {

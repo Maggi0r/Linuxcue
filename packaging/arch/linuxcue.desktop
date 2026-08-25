@@ -3,6 +3,7 @@ Type=Application
 Name=linuxcue Control Center
 Comment=Linux control center for Corsair K95, M65, and Virtuoso SE
 Exec=linuxcue qml-gui
+Icon=linuxcue
 Terminal=false
 Categories=Settings;HardwareSettings;
 Keywords=Corsair;iCUE;RGB;Keyboard;Mouse;Headset;

@@ -27,4 +27,4 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-linuxcue = ["qml/*.qml", "assets/devices/*"]
+linuxcue = ["qml/*.qml", "assets/devices/*", "assets/icons/*"]

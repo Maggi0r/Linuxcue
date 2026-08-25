@@ -39,6 +39,14 @@ from .transport import LiveHidTransport
 from .virtuoso_monitor import VirtuosoBatteryMonitor, VirtuosoUsbBatteryMonitor
 
 VIRTUOSO_BASS_BOOST_BANDS = [4, 6, 4, 0, -3, -3, -2, 1, 2, 2]
+SYSTEM_PROFILE_SET_NAME = "Standard Profil"
+SYSTEM_PROFILE_FLAG = "linuxcue_system_profile"
+SYSTEM_PROFILE_VERSION = 1
+SYSTEM_PROFILE_CHILDREN = {
+    "keyboard": ("k95", "keyboard", "Standard Profil-k95"),
+    "mouse": ("m65", "mouse", "Standard Profil-m65"),
+    "headset": ("virtuoso-se", "headset", "Standard Profil-virtuoso"),
+}
 
 
 @dataclass(slots=True)
@@ -70,6 +78,7 @@ class LinuxCueService:
         self.manager = manager or DeviceManager()
         self.store = store or ProfileStore()
         self.probe_store = probe_store or ProbeStore()
+        self.ensure_default_profiles()
 
     def discover_devices(self) -> list[Device]:
         return self.manager.discover()
@@ -391,6 +400,73 @@ class LinuxCueService:
             return self.create_virtuoso_profile(name)
         return self.create_default_profile(name)
 
+    def ensure_default_profiles(self) -> list[str]:
+        saved: list[str] = []
+        group = self.load_profile(SYSTEM_PROFILE_SET_NAME)
+        if group is None:
+            group = Profile(
+                name=SYSTEM_PROFILE_SET_NAME,
+                target_device="profile-set",
+                target_family="bundle",
+                profile_group=SYSTEM_PROFILE_SET_NAME,
+                group_role="set",
+                description="Geschuetztes Standardprofil fuer linuxcue.",
+                lighting=[],
+                cooling=[],
+            )
+            self._mark_system_profile(group, "set")
+            self.store.save(group)
+            saved.append(group.name)
+        else:
+            if self._repair_system_profile_metadata(group, "profile-set", "bundle", "set"):
+                self.store.save(group)
+                saved.append(group.name)
+
+        for role, (target, family, name) in SYSTEM_PROFILE_CHILDREN.items():
+            profile = self.load_profile(name)
+            if profile is None:
+                profile = self.create_profile_for_target(target, name)
+                profile.profile_group = SYSTEM_PROFILE_SET_NAME
+                profile.group_role = role
+                self._mark_system_profile(profile, role)
+                self.store.save(profile)
+                saved.append(profile.name)
+                continue
+            if self._repair_system_profile_metadata(profile, target, family, role):
+                self.store.save(profile)
+                saved.append(profile.name)
+        return saved
+
+    def is_protected_profile(self, name: str) -> bool:
+        profile = self.load_profile(name)
+        return bool(profile and self._is_system_profile(profile))
+
+    def _mark_system_profile(self, profile: Profile, role: str) -> None:
+        profile.profile_group = SYSTEM_PROFILE_SET_NAME
+        profile.group_role = role
+        profile.options[SYSTEM_PROFILE_FLAG] = True
+        profile.options["protected"] = True
+        profile.options["system_profile_version"] = SYSTEM_PROFILE_VERSION
+
+    def _repair_system_profile_metadata(self, profile: Profile, target_device: str, target_family: str, role: str) -> bool:
+        changed = False
+        expected = {
+            "target_device": target_device,
+            "target_family": target_family,
+            "profile_group": SYSTEM_PROFILE_SET_NAME,
+            "group_role": role,
+        }
+        for field_name, value in expected.items():
+            if getattr(profile, field_name) != value:
+                setattr(profile, field_name, value)
+                changed = True
+        before = dict(profile.options)
+        self._mark_system_profile(profile, role)
+        return changed or profile.options != before
+
+    def _is_system_profile(self, profile: Profile) -> bool:
+        return bool(profile.options.get(SYSTEM_PROFILE_FLAG) or profile.options.get("protected"))
+
     def preview_k95_profile(self, profile_name: str) -> dict[str, object] | None:
         profile = self.load_profile(profile_name)
         if profile is None:
@@ -496,7 +572,7 @@ class LinuxCueService:
 
     def rename_profile(self, old_name: str, new_name: str) -> bool:
         profile = self.load_profile(old_name)
-        if profile is None:
+        if profile is None or self._is_system_profile(profile):
             return False
         renamed = self.store.rename(old_name, new_name)
         if renamed is None:
@@ -510,10 +586,17 @@ class LinuxCueService:
         if profile is None or self.store.load(target_name) is not None:
             return False
         profile.name = target_name
+        profile.profile_group = ""
+        profile.group_role = ""
+        profile.options.pop(SYSTEM_PROFILE_FLAG, None)
+        profile.options.pop("protected", None)
+        profile.options.pop("system_profile_version", None)
         self.store.save(profile)
         return True
 
     def delete_profile(self, name: str) -> bool:
+        if self.is_protected_profile(name):
+            return False
         return self.store.delete(name)
 
     def load_profile(self, name: str) -> Profile | None:
@@ -668,6 +751,7 @@ class LinuxCueService:
                     "profile_group": profile.profile_group,
                     "group_role": profile.group_role,
                     "companion": self.profile_companion_label(profile),
+                    "protected": self._is_system_profile(profile),
                 }
             )
         return summaries

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="linuxcue">
+  <defs>
+    <linearGradient id="shell" x1="38" y1="20" x2="216" y2="238" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#10222a"/>
+      <stop offset="0.52" stop-color="#071115"/>
+      <stop offset="1" stop-color="#020506"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="54" y1="42" x2="218" y2="214" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#16e8ff"/>
+      <stop offset="0.48" stop-color="#12e8ff"/>
+      <stop offset="1" stop-color="#d7ff37"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="45%" r="58%">
+      <stop offset="0" stop-color="#12e8ff" stop-opacity="0.46"/>
+      <stop offset="0.62" stop-color="#12e8ff" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#12e8ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="58" fill="url(#shell)"/>
+  <circle cx="128" cy="126" r="94" fill="url(#glow)"/>
+  <path d="M55 139c0-45 32-80 75-80 30 0 55 15 69 39l-29 17c-8-15-22-24-40-24-25 0-42 19-42 48 0 28 17 47 42 47 18 0 32-9 40-24l29 17c-14 25-39 39-69 39-43 0-75-35-75-79Z" fill="url(#accent)" filter="url(#softShadow)"/>
+  <path d="M121 111h31v70h49v30h-80V111Z" fill="#f4fbff"/>
+  <path d="M95 49h76c21 0 38 17 38 38v4h-22v-4c0-9-7-16-16-16H95c-9 0-16 7-16 16v83c0 9 7 16 16 16h4v22h-4c-21 0-38-17-38-38V87c0-21 17-38 38-38Z" fill="#f4fbff" opacity="0.18"/>
+  <circle cx="203" cy="54" r="13" fill="#d7ff37"/>
+  <circle cx="52" cy="204" r="8" fill="#12e8ff"/>
+</svg>

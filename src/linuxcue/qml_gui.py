@@ -15,7 +15,7 @@ import xml.etree.ElementTree as ET
 QT_QML_IMPORT_ERROR: Exception | None = None
 try:
     from PySide6.QtCore import Property, QObject, QTimer, QUrl, Signal, Slot
-    from PySide6.QtGui import QGuiApplication
+    from PySide6.QtGui import QGuiApplication, QIcon
     from PySide6.QtQml import QQmlApplicationEngine
 except Exception as exc:  # pragma: no cover - depends on optional GUI runtime
     QT_QML_IMPORT_ERROR = exc
@@ -24,7 +24,7 @@ except Exception as exc:  # pragma: no cover - depends on optional GUI runtime
     Slot = lambda *args, **kwargs: (lambda fn: fn)  # type: ignore[assignment]
     Property = lambda *args, **kwargs: None  # type: ignore[assignment]
 
-from .service import LinuxCueService
+from .service import LinuxCueService, SYSTEM_PROFILE_FLAG
 from .k95_backend import K95_OPENRGB_ZONE_ORDER
 from .m65_backend import M65_RGB_ZONES
 from .m65_monitor import M65DpiInputMonitor
@@ -353,6 +353,7 @@ if QT_QML_IMPORT_ERROR is None:
                 else:
                     profile = self._profile_from_payload(payload)
                     profile.name = self._unique_profile_name(profile.name)
+                    self._clear_system_profile_flags(profile)
                     self.service.save_profile(profile)
                     self._current_profile = profile.name
                 self.refresh()
@@ -1052,6 +1053,7 @@ if QT_QML_IMPORT_ERROR is None:
                         "subtitle": self._profile_subtitle(item),
                         "target": target,
                         "selected": name == self._current_profile,
+                        "protected": bool(item.get("protected", False)),
                     }
                 )
             return rows
@@ -1674,6 +1676,8 @@ if QT_QML_IMPORT_ERROR is None:
 
         def _delete_profile_bundle(self, name: str) -> bool:
             profiles = self._profile_bundle(name)
+            if any(self.service.is_protected_profile(profile.name) for profile in profiles):
+                return False
             deleted = False
             for profile in profiles:
                 deleted = self.service.delete_profile(profile.name) or deleted
@@ -1684,6 +1688,8 @@ if QT_QML_IMPORT_ERROR is None:
                 profile = profiles[0]
                 profile.name = self._unique_profile_name(base_name)
                 profile.profile_group = ""
+                profile.group_role = ""
+                self._clear_system_profile_flags(profile)
                 self.service.save_profile(profile)
                 return [profile.name]
 
@@ -1703,9 +1709,15 @@ if QT_QML_IMPORT_ERROR is None:
                     profile.name = self._unique_profile_name(f"{new_group}-{suffix}")
                     profile.profile_group = new_group
                     profile.group_role = role
+                self._clear_system_profile_flags(profile)
                 self.service.save_profile(profile)
                 saved_names.append(profile.name)
             return saved_names
+
+        def _clear_system_profile_flags(self, profile: Profile) -> None:
+            profile.options.pop(SYSTEM_PROFILE_FLAG, None)
+            profile.options.pop("protected", None)
+            profile.options.pop("system_profile_version", None)
 
         def _path_from_url(self, url: str) -> Path | None:
             if not url:
@@ -1765,6 +1777,9 @@ def launch_qml_gui() -> None:
             "Then reinstall linuxcue with: bash scripts/install-cachyos-dev.sh"
         ) from QT_QML_IMPORT_ERROR
     app = QGuiApplication(sys.argv)
+    icon_path = Path(__file__).resolve().parent / "assets" / "icons" / "linuxcue.svg"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
     engine = QQmlApplicationEngine()
     bridge = LinuxCueQmlBridge()
     engine.rootContext().setContextProperty("linuxcue", bridge)
