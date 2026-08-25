@@ -420,12 +420,6 @@ ApplicationWindow {
                         enabled: linuxcue.updateAvailable
                         scale: 1.0
                         onClicked: linuxcue.installUpdate()
-                        SequentialAnimation on scale {
-                            running: linuxcue.updateAvailable
-                            loops: Animation.Infinite
-                            NumberAnimation { to: 1.025; duration: 520; easing.type: Easing.InOutQuad }
-                            NumberAnimation { to: 1.0; duration: 520; easing.type: Easing.InOutQuad }
-                        }
                         background: Rectangle {
                             radius: 7
                             color: linuxcue.updateAvailable ? "#d6ff28" : "#1f292d"
@@ -1812,7 +1806,7 @@ ApplicationWindow {
                                     }
                                     Button { Layout.fillWidth: true; text: "Flat EQ"; onClicked: linuxcue.applyVirtuosoFlatEq() }
                                     Button { Layout.fillWidth: true; text: "Apply Linux EQ"; highlighted: true; onClicked: linuxcue.applyVirtuosoLinuxEq() }
-                                    Button { Layout.fillWidth: true; text: "Native PipeWire EQ anwenden"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
+                                    Button { Layout.fillWidth: true; text: "Live EQ starten"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
                                     Rectangle {
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 86
@@ -1822,7 +1816,7 @@ ApplicationWindow {
                                         Text {
                                             anchors.fill: parent
                                             anchors.margins: 12
-                                            text: "Slider speichern die EQ-Werte ohne Audioabriss. Native PipeWire EQ anwenden laedt die Filter-Chain neu und kann aktive Browser-Streams kurz trennen."
+                                            text: "Live EQ nutzt einen linuxcue Audio-Helper. Slider starten/aktualisieren ihn direkt ohne EasyEffects und ohne PipeWire-Neustart."
                                             color: "#d7edf0"
                                             wrapMode: Text.WordWrap
                                             font.pixelSize: 12

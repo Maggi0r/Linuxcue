@@ -1053,10 +1053,10 @@ if QT_QML_IMPORT_ERROR is None:
             profile.options["virtuoso_eq_backend"] = "pipewire"
             self.service.save_profile(profile)
             try:
-                result = self.service.apply_virtuoso_pipewire_eq(profile.name)
-                self._status = f"Native PipeWire EQ aktiv: {result.get('preset', 'Preset')}"
+                result = self.service.start_virtuoso_live_eq(profile.name)
+                self._status = f"Virtuoso Live EQ aktiv: {result.get('target_sink', 'Audio')}"
             except Exception as exc:
-                self._status = f"Native PipeWire EQ fehlgeschlagen: {exc}"
+                self._status = f"Virtuoso Live EQ fehlgeschlagen: {exc}"
             self.dataChanged.emit()
 
         def _profile_subtitle(self, item: dict[str, object]) -> str:
@@ -1278,13 +1278,13 @@ if QT_QML_IMPORT_ERROR is None:
             try:
                 backend = self._virtuoso_eq_backend_for_profile(profile_name)
                 if backend == "pipewire":
-                    result = self.service.apply_virtuoso_pipewire_eq(profile_name, restart=False)
-                    self.statusReady.emit(f"Native PipeWire EQ gespeichert: {result.get('preset', 'Preset')} (mit Button neu anwenden)")
+                    result = self.service.update_virtuoso_live_eq(profile_name)
+                    self.statusReady.emit(f"Virtuoso Live EQ aktualisiert: {result.get('preset', 'Preset')}")
                 else:
                     result = self.service.apply_virtuoso_easyeffects(profile_name)
                     self.statusReady.emit(f"Virtuoso Linux EQ aktiv: {result.get('preset', 'Preset')}")
             except Exception as exc:
-                backend_label = "Native PipeWire EQ" if self._virtuoso_eq_backend_for_profile(profile_name) == "pipewire" else "Virtuoso Linux EQ"
+                backend_label = "Virtuoso Live EQ" if self._virtuoso_eq_backend_for_profile(profile_name) == "pipewire" else "Virtuoso Linux EQ"
                 self.statusReady.emit(f"{backend_label} fehlgeschlagen: {exc}")
             next_profile: str | None = None
             with self._virtuoso_eq_apply_lock:

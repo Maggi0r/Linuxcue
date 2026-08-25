@@ -126,6 +126,10 @@ def build_parser() -> argparse.ArgumentParser:
     apply_virtuoso_pipewire_eq.add_argument("--preset", help="Optional EQ preset name. Defaults to the active preset.")
     apply_virtuoso_pipewire_eq.add_argument("--no-restart", action="store_true", help="Only write the PipeWire config; do not restart user PipeWire services.")
 
+    start_virtuoso_live_eq = subparsers.add_parser("start-virtuoso-live-eq", help="Start the linuxcue low-latency Virtuoso EQ helper.")
+    start_virtuoso_live_eq.add_argument("name", help="Virtuoso profile name")
+    start_virtuoso_live_eq.add_argument("--preset", help="Optional EQ preset name. Defaults to the active preset.")
+
     preview_k95 = subparsers.add_parser("preview-k95", help="Preview the K95 HID frames for a saved profile.")
     preview_k95.add_argument("name", help="Profile name")
 
@@ -437,6 +441,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "apply-virtuoso-pipewire-eq":
         try:
             print(json.dumps(service.apply_virtuoso_pipewire_eq(args.name, preset_name=args.preset, restart=not args.no_restart), indent=2))
+        except RuntimeError as exc:
+            parser.error(str(exc))
+        return 0
+
+    if args.command == "start-virtuoso-live-eq":
+        try:
+            print(json.dumps(service.start_virtuoso_live_eq(args.name, preset_name=args.preset), indent=2))
         except RuntimeError as exc:
             parser.error(str(exc))
         return 0

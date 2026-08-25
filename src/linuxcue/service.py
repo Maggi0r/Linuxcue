@@ -35,6 +35,7 @@ from .pipewire_eq import set_default_virtuoso_eq_sink, restart_pipewire_user_ser
 from .profile_store import ProfileStore
 from .probe_store import ProbeStore
 from .protocol_map import all_capability_maps, capability_map_for_slug
+from .runtime_eq import start_virtuoso_runtime_eq, virtuoso_runtime_eq_running, write_virtuoso_runtime_eq_state
 from .simulator import plan_apply
 from .transport import LiveHidTransport
 from .virtuoso_monitor import VirtuosoBatteryMonitor, VirtuosoUsbBatteryMonitor
@@ -713,6 +714,41 @@ class LinuxCueService:
             "reload": reload_result,
             "route": route_result,
             "note": "Select the virtual sink 'linuxcue Virtuoso EQ' as output if WirePlumber does not route it automatically.",
+        }
+
+    def start_virtuoso_live_eq(self, name: str, preset_name: str | None = None) -> dict[str, object]:
+        if not sys.platform.startswith("linux"):
+            raise RuntimeError("Virtuoso live EQ helper is only supported on Linux/PipeWire/Pulse.")
+        for binary in ("pactl", "parec", "paplay"):
+            if shutil.which(binary) is None:
+                raise RuntimeError(f"{binary} was not found. Install libpulse/pulseaudio-utils compatibility tools.")
+        try:
+            import numpy  # noqa: F401
+        except ImportError as exc:
+            raise RuntimeError("python-numpy is required for the Virtuoso live EQ helper.") from exc
+        profile = self.load_profile(name)
+        if profile is None:
+            raise RuntimeError(f"Profile not found: {name}")
+        if profile.target_device != "virtuoso-se":
+            raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
+        selected = self._selected_audio_preset(profile, preset_name)
+        return start_virtuoso_runtime_eq(profile, selected)
+
+    def update_virtuoso_live_eq(self, name: str, preset_name: str | None = None) -> dict[str, object]:
+        profile = self.load_profile(name)
+        if profile is None:
+            raise RuntimeError(f"Profile not found: {name}")
+        if profile.target_device != "virtuoso-se":
+            raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
+        selected = self._selected_audio_preset(profile, preset_name)
+        if not virtuoso_runtime_eq_running():
+            return self.start_virtuoso_live_eq(name, preset_name=preset_name)
+        path = write_virtuoso_runtime_eq_state(profile, selected)
+        return {
+            "profile": name,
+            "preset": selected.name,
+            "backend": "linuxcue live EQ helper",
+            "state": str(path),
         }
 
     def easyeffects_doctor(self) -> dict[str, object]:

@@ -18,7 +18,9 @@ if ! sudo pacman -Syu --needed \
   python-setuptools \
   python-wheel \
   python-hidapi \
+  python-numpy \
   python-pyusb \
+  libpulse \
   pipewire \
   pipewire-pulse \
   wireplumber \

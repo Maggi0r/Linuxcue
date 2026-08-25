@@ -105,16 +105,16 @@ frames are not observed to change the headset state. Treat Virtuoso HID EQ as
 experimental. linuxcue therefore offers two Linux EQ paths: a native PipeWire
 filter-chain managed by linuxcue, and EasyEffects as a compatibility fallback.
 
-Native PipeWire EQ:
+linuxcue Live EQ helper:
 
 ```bash
 linuxcue repair-virtuoso-presets "PUBG-virtuoso"
-linuxcue apply-virtuoso-pipewire-eq "PUBG-virtuoso"
+linuxcue start-virtuoso-live-eq "PUBG-virtuoso"
 ```
 
-This writes `~/.config/pipewire/pipewire.conf.d/90-linuxcue-virtuoso-eq.conf`
-and restarts the user PipeWire services. If the audio is not routed
-automatically, select the virtual sink `linuxcue Virtuoso EQ` as output.
+This creates the virtual sink `linuxcue Virtuoso EQ`, routes audio through a
+small linuxcue helper, and updates EQ bands live from linuxcue without
+restarting PipeWire or EasyEffects.
 
 EasyEffects fallback:
 
@@ -149,6 +149,7 @@ Virtuoso EQ through PipeWire/EasyEffects:
 - `pyside6` and `qt6-declarative` for the Qt Quick/QML GUI
 - `python-hidapi` and `python-pyusb` for Corsair HID/USB access
 - `pipewire`, `pipewire-pulse`, and `wireplumber` for native Virtuoso EQ routing
+- `python-numpy` and `libpulse` for the low-latency linuxcue Live EQ helper
 - `easyeffects` and `lsp-plugins-lv2` for the Virtuoso EQ fallback path
 - `git` for GitHub-based update checks and self-updates
 - `base-devel`, `python-build`, `python-installer`, `python-setuptools`, and `python-wheel` for local package builds
