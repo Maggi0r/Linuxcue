@@ -99,7 +99,7 @@ if QT_QML_IMPORT_ERROR is None:
             self._virtuoso_mic_level = 72
             self._virtuoso_sleep_timer = 20
             self._virtuoso_voice_prompts = True
-            self._virtuoso_eq_backend = "easyeffects"
+            self._virtuoso_eq_backend = "pipewire"
             self._m65_lighting_zones: list[dict[str, Any]] = []
             self._m65_dpi_presets: list[dict[str, Any]] = []
             self._m65_dpi_stages: list[dict[str, Any]] = []
@@ -1039,6 +1039,8 @@ if QT_QML_IMPORT_ERROR is None:
                 self.dataChanged.emit()
                 return
             self._virtuoso_eq_backend = "pipewire"
+            profile.options["virtuoso_eq_backend"] = "pipewire"
+            self.service.save_profile(profile)
             try:
                 result = self.service.apply_virtuoso_pipewire_eq(profile.name)
                 self._status = f"Native PipeWire EQ aktiv: {result.get('preset', 'Preset')}"
@@ -1220,6 +1222,7 @@ if QT_QML_IMPORT_ERROR is None:
                 profile.audio[0].active = True
             if profile.headset is None:
                 profile.headset = HeadsetSetting()
+            profile.options.setdefault("virtuoso_eq_backend", "pipewire")
             self._virtuoso_accent_zone(profile)
 
         def _active_virtuoso_preset(self, profile: Profile) -> AudioPreset:
@@ -1262,15 +1265,16 @@ if QT_QML_IMPORT_ERROR is None:
 
         def _apply_virtuoso_eq_worker(self, profile_name: str) -> None:
             try:
-                if self._virtuoso_eq_backend == "pipewire":
+                backend = self._virtuoso_eq_backend_for_profile(profile_name)
+                if backend == "pipewire":
                     result = self.service.apply_virtuoso_pipewire_eq(profile_name)
                     self.statusReady.emit(f"Native PipeWire EQ aktiv: {result.get('preset', 'Preset')}")
                 else:
                     result = self.service.apply_virtuoso_easyeffects(profile_name)
                     self.statusReady.emit(f"Virtuoso Linux EQ aktiv: {result.get('preset', 'Preset')}")
             except Exception as exc:
-                backend = "Native PipeWire EQ" if self._virtuoso_eq_backend == "pipewire" else "Virtuoso Linux EQ"
-                self.statusReady.emit(f"{backend} fehlgeschlagen: {exc}")
+                backend_label = "Native PipeWire EQ" if self._virtuoso_eq_backend_for_profile(profile_name) == "pipewire" else "Virtuoso Linux EQ"
+                self.statusReady.emit(f"{backend_label} fehlgeschlagen: {exc}")
             next_profile: str | None = None
             with self._virtuoso_eq_apply_lock:
                 if self._virtuoso_eq_apply_pending:
@@ -1280,6 +1284,13 @@ if QT_QML_IMPORT_ERROR is None:
                     self._virtuoso_eq_apply_running = False
             if next_profile is not None:
                 self._apply_virtuoso_eq_worker(next_profile)
+
+        def _virtuoso_eq_backend_for_profile(self, profile_name: str) -> str:
+            profile = self.service.load_profile(profile_name)
+            if profile is None:
+                return self._virtuoso_eq_backend
+            backend = str(profile.options.get("virtuoso_eq_backend") or self._virtuoso_eq_backend).casefold()
+            return "easyeffects" if backend == "easyeffects" else "pipewire"
 
         def _refresh_m65_state(self) -> None:
             profile = self._active_profile_for_target("m65")
