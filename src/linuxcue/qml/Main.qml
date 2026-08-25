@@ -121,6 +121,16 @@ ApplicationWindow {
         onTriggered: linuxcue.writeLive()
     }
 
+    Timer {
+        id: virtuosoEqLiveTimer
+        interval: 180
+        repeat: false
+        onTriggered: {
+            if (autoLiveWrite)
+                linuxcue.applyVirtuosoLinuxEq()
+        }
+    }
+
     Rectangle {
         anchors.fill: parent
         gradient: Gradient {
@@ -1702,13 +1712,17 @@ ApplicationWindow {
                                                     Layout.fillHeight: true
                                                     Layout.preferredWidth: 28
                                                     orientation: Qt.Vertical
-                                                    from: -12
-                                                    to: 12
+                                                    from: -36
+                                                    to: 36
                                                     stepSize: 1
                                                     value: modelData
+                                                    onMoved: {
+                                                        linuxcue.setVirtuosoBand(index, Math.round(value), false)
+                                                        virtuosoEqLiveTimer.restart()
+                                                    }
                                                     onPressedChanged: {
                                                         if (!pressed)
-                                                            linuxcue.setVirtuosoBand(index, Math.round(value), false)
+                                                            linuxcue.setVirtuosoBand(index, Math.round(value), autoLiveWrite)
                                                     }
                                                 }
                                                 Text {

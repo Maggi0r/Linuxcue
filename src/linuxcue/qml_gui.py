@@ -40,6 +40,8 @@ M65_DPI_DEFAULTS: dict[str, tuple[int, str]] = {
     "sniper": (400, "#1ecfdf"),
 }
 M65_DPI_DEFAULT_ACTIVE = "stage2"
+VIRTUOSO_EQ_MIN = -36
+VIRTUOSO_EQ_MAX = 36
 
 
 def _device_slug(target: str, family: str) -> str:
@@ -955,7 +957,7 @@ if QT_QML_IMPORT_ERROR is None:
             preset = self._active_virtuoso_preset(profile)
             bands = self._virtuoso_bands(preset)
             if 0 <= index < len(bands):
-                bands[index] = max(-12, min(12, int(value)))
+                bands[index] = max(VIRTUOSO_EQ_MIN, min(VIRTUOSO_EQ_MAX, int(value)))
                 preset.bands = bands
                 self.service.save_profile(profile)
                 self._refresh_virtuoso_state()
@@ -1030,11 +1032,7 @@ if QT_QML_IMPORT_ERROR is None:
             connected_slugs = self._connected_slugs(status)
             profile_slugs = self._current_profile_device_slugs()
             cards: list[dict[str, Any]] = []
-            virtuoso_wireless = any(
-                "receiver" in str(device.get("target", "")).casefold()
-                or "receiver" in str(device.get("product", "")).casefold()
-                for device in status.get("devices", [])
-            )
+            virtuoso_wireless = any(self._is_virtuoso_wireless_device(device) for device in status.get("devices", []))
             for slug in ["k95", "m65", "virtuoso-se", "receiver"]:
                 if slug not in profile_slugs or slug not in connected_slugs:
                     continue
@@ -1085,7 +1083,23 @@ if QT_QML_IMPORT_ERROR is None:
                 slug = _device_slug(str(device.get("target", "")), str(device.get("family", "")))
                 if slug != "unknown":
                     slugs.add(slug)
+                if self._is_virtuoso_wireless_device(device):
+                    slugs.add("virtuoso-se")
             return slugs
+
+        @staticmethod
+        def _is_virtuoso_wireless_device(device: dict[str, Any]) -> bool:
+            text = " ".join(
+                str(device.get(key, ""))
+                for key in ("target", "product", "family", "transport", "endpoint_role")
+            ).casefold()
+            product_id = str(device.get("product_id", "")).casefold()
+            return (
+                product_id == "0x0a46"
+                or "wireless-receiver" in text
+                or "wireless receiver" in text
+                or ("receiver" in text and "virtuoso" in text)
+            )
 
         def _current_profile_device_slugs(self) -> set[str]:
             profile = self.service.load_profile(self._current_profile)
@@ -1162,7 +1176,7 @@ if QT_QML_IMPORT_ERROR is None:
                     preset.treble,
                 ]
             values.extend([0] * (10 - len(values)))
-            return [max(-12, min(12, int(value))) for value in values[:10]]
+            return [max(VIRTUOSO_EQ_MIN, min(VIRTUOSO_EQ_MAX, int(value))) for value in values[:10]]
 
         def _virtuoso_accent_zone(self, profile: Profile) -> LightingZone:
             zone = next((item for item in profile.lighting if item.name == "accent_ring"), None)

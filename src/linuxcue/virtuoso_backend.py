@@ -294,7 +294,7 @@ def _output_payload(values: list[int]) -> bytes:
 
 
 def _signed_byte(value: int) -> int:
-    clamped = max(-12, min(value, 12))
+    clamped = max(-36, min(value, 36))
     return clamped & 0xFF
 
 
