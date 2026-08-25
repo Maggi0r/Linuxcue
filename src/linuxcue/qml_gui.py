@@ -560,6 +560,7 @@ if QT_QML_IMPORT_ERROR is None:
                     "color": "#04ff00",
                     "zone": "all",
                     "selected": True,
+                    "profile": profile.name,
                 }
             )
             profile.options["lighting_layers"] = layers
@@ -584,6 +585,7 @@ if QT_QML_IMPORT_ERROR is None:
             new_layer = dict(source)
             new_layer["id"] = self._unique_lighting_layer_id(layers, str(source.get("id") or "layer"))
             new_layer["title"] = self._unique_lighting_layer_title(layers, f"{source.get('title', 'Schicht')} Kopie")
+            new_layer["profile"] = profile.name
             for layer in layers:
                 layer["selected"] = False
             new_layer["selected"] = True
@@ -1523,27 +1525,40 @@ if QT_QML_IMPORT_ERROR is None:
         def _lighting_layer_store(self, profile: Profile) -> list[dict[str, Any]]:
             raw_layers = profile.options.get("lighting_layers")
             if isinstance(raw_layers, list) and raw_layers:
-                layers = [self._normalise_lighting_layer(item, index) for index, item in enumerate(raw_layers) if isinstance(item, dict)]
+                layers = [
+                    self._normalise_lighting_layer(item, index, profile.name)
+                    for index, item in enumerate(copy.deepcopy(raw_layers))
+                    if isinstance(item, dict) and self._lighting_layer_belongs_to_profile(item, profile.name)
+                ]
                 if layers:
                     if not any(layer.get("selected") for layer in layers):
                         layers[0]["selected"] = True
+                    changed = layers != raw_layers
+                    profile.options["lighting_layers"] = layers
+                    if changed:
+                        self.service.save_profile(profile)
                     return layers
             color = self._first_k95_color(profile)
             layers = [
-                {"id": "static-color", "title": "Statische Farbe", "color": color, "selected": True},
-                {"id": "color-shift", "title": "Farbwechsel", "color": "#1ecfdf", "selected": False},
+                {"id": "static-color", "title": "Statische Farbe", "color": color, "zone": "all", "selected": True, "profile": profile.name},
+                {"id": "color-shift", "title": "Farbwechsel", "color": "#1ecfdf", "zone": "all", "selected": False, "profile": profile.name},
             ]
             profile.options["lighting_layers"] = layers
             self.service.save_profile(profile)
             return layers
 
-        def _normalise_lighting_layer(self, item: dict[str, Any], index: int) -> dict[str, Any]:
+        def _lighting_layer_belongs_to_profile(self, item: dict[str, Any], profile_name: str) -> bool:
+            owner = str(item.get("profile") or "")
+            return not owner or owner == profile_name
+
+        def _normalise_lighting_layer(self, item: dict[str, Any], index: int, profile_name: str) -> dict[str, Any]:
             return {
                 "id": str(item.get("id") or f"layer-{index + 1}"),
                 "title": str(item.get("title") or "Beleuchtungsschicht"),
                 "color": str(item.get("color") or "#04ff00"),
                 "zone": str(item.get("zone") or "all"),
                 "selected": bool(item.get("selected", index == 0)),
+                "profile": profile_name,
             }
 
         def _first_k95_color(self, profile: Profile) -> str:
@@ -1568,6 +1583,7 @@ if QT_QML_IMPORT_ERROR is None:
                     "color": color,
                     "zone": clean_zone,
                     "selected": True,
+                    "profile": profile.name,
                 }
                 layers.append(target)
             for layer in layers:
@@ -1575,6 +1591,7 @@ if QT_QML_IMPORT_ERROR is None:
             target["color"] = color
             target["zone"] = clean_zone
             target["title"] = self._lighting_layer_title_for_zone(clean_zone)
+            target["profile"] = profile.name
             profile.options["lighting_layers"] = layers
             self.service.save_profile(profile)
             self._lighting_layers = layers
@@ -1684,6 +1701,7 @@ if QT_QML_IMPORT_ERROR is None:
             return deleted
 
         def _save_bundle_copy(self, profiles: list[Profile], base_name: str) -> list[str]:
+            profiles = copy.deepcopy(profiles)
             if len(profiles) == 1 and profiles[0].target_device != "profile-set":
                 profile = profiles[0]
                 profile.name = self._unique_profile_name(base_name)
