@@ -440,7 +440,8 @@ if QT_QML_IMPORT_ERROR is None:
             command = (
                 "linuxcue install-update --yes; "
                 "status=$?; echo; "
-                "if [ $status -eq 0 ]; then echo 'linuxcue Update abgeschlossen.'; "
+                "if [ $status -eq 0 ]; then echo 'linuxcue Update abgeschlossen. Starte linuxcue neu...'; "
+                "nohup linuxcue qml-gui >/tmp/linuxcue-restart.log 2>&1 & "
                 "else echo 'linuxcue Update fehlgeschlagen.'; fi; "
                 "echo 'Fenster kann geschlossen werden.'; "
                 "read -r -p 'Enter zum Schliessen...'; exit $status"
@@ -456,6 +457,7 @@ if QT_QML_IMPORT_ERROR is None:
                     subprocess.Popen(args)
                     self._status = "Update-Installation im Terminal gestartet."
                     self.dataChanged.emit()
+                    QTimer.singleShot(1200, QGuiApplication.instance().quit)
                     return
             self._status = "Kein Terminal gefunden. Bitte ausfuehren: linuxcue install-update --yes"
             self.dataChanged.emit()
@@ -558,7 +560,8 @@ if QT_QML_IMPORT_ERROR is None:
                     "id": self._unique_lighting_layer_id(layers, "layer"),
                     "title": self._unique_lighting_layer_title(layers, layer_title),
                     "color": "#04ff00",
-                    "zone": "all",
+                    "zone": "keys:",
+                    "keys": [],
                     "selected": True,
                     "profile": profile.name,
                 }
@@ -667,6 +670,7 @@ if QT_QML_IMPORT_ERROR is None:
             if next_layers and not any(layer.get("selected") for layer in next_layers):
                 next_layers[0]["selected"] = True
             profile.options["lighting_layers"] = next_layers
+            self._apply_lighting_layers_to_profile(profile, next_layers)
             self.service.save_profile(profile)
             self._refresh_lighting_layers()
             try:
@@ -1607,6 +1611,8 @@ if QT_QML_IMPORT_ERROR is None:
             selected = next((layer for layer in layers if layer.get("selected")), None)
             target = None
             if selected is not None and str(selected.get("zone") or "all") == clean_zone:
+                target = selected
+            if target is None and selected is not None and not self._k95_quick_zone_keys(str(selected.get("zone") or "")):
                 target = selected
             if target is None:
                 target = next((layer for layer in layers if str(layer.get("zone") or "all") == clean_zone), None)
