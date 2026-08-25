@@ -7,6 +7,7 @@ from .easyeffects_export import ICUE_EQ_FREQUENCIES
 from .models import AudioPreset, Profile
 
 PIPEWIRE_EQ_CONFIG = Path.home() / ".config" / "pipewire" / "pipewire.conf.d" / "90-linuxcue-virtuoso-eq.conf"
+PIPEWIRE_EQ_SINK_NAME = "effect_input.linuxcue_virtuoso_eq"
 PIPEWIRE_RESTART_UNITS = (
     "pipewire.service",
     "pipewire-pulse.service",
@@ -55,6 +56,19 @@ def restart_pipewire_user_services(timeout: int = 8) -> dict[str, object]:
         "stderr": result.stderr.strip(),
         "available_units": sorted(available_units),
         "restart_units": restart_units,
+        "ok": result.returncode == 0,
+    }
+
+
+def set_default_virtuoso_eq_sink(timeout: int = 4) -> dict[str, object]:
+    command = ["pactl", "set-default-sink", PIPEWIRE_EQ_SINK_NAME]
+    result = subprocess.run(command, check=False, capture_output=True, text=True, timeout=timeout)
+    return {
+        "command": command,
+        "returncode": result.returncode,
+        "stdout": result.stdout.strip(),
+        "stderr": result.stderr.strip(),
+        "sink": PIPEWIRE_EQ_SINK_NAME,
         "ok": result.returncode == 0,
     }
 

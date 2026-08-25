@@ -99,6 +99,7 @@ if QT_QML_IMPORT_ERROR is None:
             self._virtuoso_mic_level = 72
             self._virtuoso_sleep_timer = 20
             self._virtuoso_voice_prompts = True
+            self._virtuoso_eq_backend = "easyeffects"
             self._m65_lighting_zones: list[dict[str, Any]] = []
             self._m65_dpi_presets: list[dict[str, Any]] = []
             self._m65_dpi_stages: list[dict[str, Any]] = []
@@ -1037,6 +1038,7 @@ if QT_QML_IMPORT_ERROR is None:
                 self._status = "Kein Virtuoso-Profil aktiv."
                 self.dataChanged.emit()
                 return
+            self._virtuoso_eq_backend = "pipewire"
             try:
                 result = self.service.apply_virtuoso_pipewire_eq(profile.name)
                 self._status = f"Native PipeWire EQ aktiv: {result.get('preset', 'Preset')}"
@@ -1260,10 +1262,15 @@ if QT_QML_IMPORT_ERROR is None:
 
         def _apply_virtuoso_eq_worker(self, profile_name: str) -> None:
             try:
-                result = self.service.apply_virtuoso_easyeffects(profile_name)
-                self.statusReady.emit(f"Virtuoso Linux EQ aktiv: {result.get('preset', 'Preset')}")
+                if self._virtuoso_eq_backend == "pipewire":
+                    result = self.service.apply_virtuoso_pipewire_eq(profile_name)
+                    self.statusReady.emit(f"Native PipeWire EQ aktiv: {result.get('preset', 'Preset')}")
+                else:
+                    result = self.service.apply_virtuoso_easyeffects(profile_name)
+                    self.statusReady.emit(f"Virtuoso Linux EQ aktiv: {result.get('preset', 'Preset')}")
             except Exception as exc:
-                self.statusReady.emit(f"Virtuoso Linux EQ fehlgeschlagen: {exc}")
+                backend = "Native PipeWire EQ" if self._virtuoso_eq_backend == "pipewire" else "Virtuoso Linux EQ"
+                self.statusReady.emit(f"{backend} fehlgeschlagen: {exc}")
             next_profile: str | None = None
             with self._virtuoso_eq_apply_lock:
                 if self._virtuoso_eq_apply_pending:

@@ -31,7 +31,7 @@ from .virtuoso_backend import (
 )
 from .known_devices import TARGET_DEVICES, known_device_by_slug, mock_probe_for_slug, support_for_product
 from .models import Device, ProbeData, Profile
-from .pipewire_eq import restart_pipewire_user_services, write_virtuoso_pipewire_eq
+from .pipewire_eq import set_default_virtuoso_eq_sink, restart_pipewire_user_services, write_virtuoso_pipewire_eq
 from .profile_store import ProfileStore
 from .probe_store import ProbeStore
 from .protocol_map import all_capability_maps, capability_map_for_slug
@@ -686,6 +686,7 @@ class LinuxCueService:
         selected = self._selected_audio_preset(profile, preset_name)
         path = write_virtuoso_pipewire_eq(profile, selected)
         reload_result: dict[str, object] | None = None
+        route_result: dict[str, object] | None = None
         if restart:
             if shutil.which("systemctl") is None:
                 raise RuntimeError("systemctl was not found. PipeWire config was written, but PipeWire must be restarted manually.")
@@ -695,6 +696,14 @@ class LinuxCueService:
                     "PipeWire config was written, but the virtual EQ sink could not be activated yet. "
                     f"{reload_result.get('stderr', '')}"
                 )
+            if shutil.which("pactl") is not None:
+                time.sleep(0.4)
+                route_result = set_default_virtuoso_eq_sink()
+                if not route_result.get("ok"):
+                    raise RuntimeError(
+                        "PipeWire EQ was activated, but linuxcue could not select the virtual sink as default output. "
+                        f"stderr: {route_result.get('stderr', '')}"
+                    )
         return {
             "profile": name,
             "preset": selected.name,
@@ -702,6 +711,7 @@ class LinuxCueService:
             "config": str(path),
             "restart": restart,
             "reload": reload_result,
+            "route": route_result,
             "note": "Select the virtual sink 'linuxcue Virtuoso EQ' as output if WirePlumber does not route it automatically.",
         }
 
