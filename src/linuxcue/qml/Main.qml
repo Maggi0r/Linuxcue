@@ -693,6 +693,7 @@ ApplicationWindow {
                                 keyColors: linuxcue.k95KeyColors
                                 selectedKey: k95SelectedKey
                                 selectedKeys: k95SelectedKeys
+                                mergeDragSelection: k95EditingLayerId !== ""
                                 onSelectionChanged: function(keys) {
                                     if (k95EditingLayerId !== "" && keys.length === 0) {
                                         k95KeyboardPreview.setSelection(k95SelectedKeys, false)

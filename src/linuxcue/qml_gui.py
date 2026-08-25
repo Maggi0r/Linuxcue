@@ -441,16 +441,15 @@ if QT_QML_IMPORT_ERROR is None:
                 "linuxcue install-update --yes; "
                 "status=$?; echo; "
                 "if [ $status -eq 0 ]; then echo 'linuxcue Update abgeschlossen. Starte linuxcue neu...'; "
-                "nohup linuxcue qml-gui >/tmp/linuxcue-restart.log 2>&1 & "
-                "else echo 'linuxcue Update fehlgeschlagen.'; fi; "
-                "echo 'Fenster kann geschlossen werden.'; "
-                "read -r -p 'Enter zum Schliessen...'; exit $status"
+                "nohup linuxcue qml-gui >/tmp/linuxcue-restart.log 2>&1 & exit 0; "
+                "else echo 'linuxcue Update fehlgeschlagen.'; "
+                "read -r -p 'Enter zum Schliessen...'; exit $status; fi"
             )
             terminals = [
-                ["konsole", "--noclose", "-e", "bash", "-lc", command],
+                ["konsole", "-e", "bash", "-lc", command],
                 ["gnome-terminal", "--", "bash", "-lc", command],
-                ["xfce4-terminal", "--hold", "-e", f"bash -lc {command!r}"],
-                ["xterm", "-hold", "-e", "bash", "-lc", command],
+                ["xfce4-terminal", "-e", f"bash -lc {command!r}"],
+                ["xterm", "-e", "bash", "-lc", command],
             ]
             for args in terminals:
                 if shutil.which(args[0]):
