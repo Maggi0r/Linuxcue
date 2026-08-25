@@ -53,6 +53,18 @@ ApplicationWindow {
         k95SelectedEffect = ""
     }
 
+    function resetDeviceViews() {
+        clearK95Selection()
+        k95Section = "lighting"
+        m65Section = "lighting"
+        m65SelectedZone = "all"
+        m65SelectedColor = "#04ff00"
+        contextM65DpiPresetId = ""
+        contextM65DpiPresetName = ""
+        contextM65DpiPresetDefault = false
+        virtuosoSection = "lighting"
+    }
+
     function activeVirtuosoPresetName() {
         for (var i = 0; i < linuxcue.virtuosoPresets.length; i++) {
             if (linuxcue.virtuosoPresets[i].selected)
@@ -232,7 +244,7 @@ ApplicationWindow {
                             acceptedButtons: Qt.LeftButton | Qt.RightButton
                             onClicked: function(mouse) {
                                 if (mouse.button === Qt.LeftButton) {
-                                    clearK95Selection()
+                                    resetDeviceViews()
                                     linuxcue.selectProfile(modelData.name)
                                     if (autoLiveWrite)
                                         profileLiveWriteTimer.restart()
@@ -499,9 +511,7 @@ ApplicationWindow {
                                     font.bold: false
                                     onClicked: {
                                         linuxcue.addLightingLayer("Statische Farbe")
-                                        showK95EffectPicker = true
-                                        k95SelectedEffect = ""
-                                        k95HasSelection = false
+                                        clearK95Selection()
                                     }
                                     contentItem: Text {
                                         text: parent.text
