@@ -1278,8 +1278,8 @@ if QT_QML_IMPORT_ERROR is None:
             try:
                 backend = self._virtuoso_eq_backend_for_profile(profile_name)
                 if backend == "pipewire":
-                    result = self.service.apply_virtuoso_pipewire_eq(profile_name)
-                    self.statusReady.emit(f"Native PipeWire EQ aktiv: {result.get('preset', 'Preset')}")
+                    result = self.service.apply_virtuoso_pipewire_eq(profile_name, restart=False)
+                    self.statusReady.emit(f"Native PipeWire EQ gespeichert: {result.get('preset', 'Preset')} (mit Button neu anwenden)")
                 else:
                     result = self.service.apply_virtuoso_easyeffects(profile_name)
                     self.statusReady.emit(f"Virtuoso Linux EQ aktiv: {result.get('preset', 'Preset')}")
