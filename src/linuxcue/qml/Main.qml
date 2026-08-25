@@ -335,14 +335,29 @@ ApplicationWindow {
                     id: selectionMenu
                     MenuItem { text: "Auswahl kopieren"; onTriggered: copiedSelectionTarget = k95SelectedQuickZone }
                     MenuItem {
+                        text: "Zur aktiven Schicht hinzufuegen"
+                        enabled: k95HasSelection
+                        onTriggered: {
+                            linuxcue.addK95SelectionToLayer(k95SelectedQuickZone, autoLiveWrite)
+                            clearK95Selection()
+                            k95KeyboardPreview.clearSelection()
+                        }
+                    }
+                    MenuItem {
+                        text: "Aus aktiver Schicht entfernen"
+                        enabled: k95HasSelection
+                        onTriggered: {
+                            linuxcue.removeK95SelectionFromLayer(k95SelectedQuickZone, autoLiveWrite)
+                            clearK95Selection()
+                            k95KeyboardPreview.clearSelection()
+                        }
+                    }
+                    MenuSeparator {}
+                    MenuItem {
                         text: "Auswahl loeschen"
                         onTriggered: {
-                            k95SelectedQuickZone = "all"
-                            k95SelectedKey = ""
-                            k95SelectedKeys = []
-                            k95HasSelection = false
-                            k95SelectedEffect = ""
-                            showK95EffectPicker = false
+                            clearK95Selection()
+                            k95KeyboardPreview.clearSelection()
                         }
                     }
                 }

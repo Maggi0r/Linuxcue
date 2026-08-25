@@ -676,6 +676,14 @@ if QT_QML_IMPORT_ERROR is None:
                 self._status = f"Beleuchtungsschicht geloescht, Live Write fehlgeschlagen: {exc}"
             self.dataChanged.emit()
 
+        @Slot(str, bool)
+        def addK95SelectionToLayer(self, zone: str, live: bool = True) -> None:
+            self._modify_k95_layer_keys(zone, add=True, live=live)
+
+        @Slot(str, bool)
+        def removeK95SelectionFromLayer(self, zone: str, live: bool = True) -> None:
+            self._modify_k95_layer_keys(zone, add=False, live=live)
+
         @Slot()
         def k95HardwareMode(self) -> None:
             try:
@@ -1595,6 +1603,71 @@ if QT_QML_IMPORT_ERROR is None:
             profile.options["lighting_layers"] = layers
             self.service.save_profile(profile)
             self._lighting_layers = layers
+
+        def _modify_k95_layer_keys(self, zone: str, *, add: bool, live: bool) -> None:
+            profile = self._active_profile_for_target("k95")
+            if profile is None:
+                self._status = "Kein K95-Profil aktiv."
+                self.dataChanged.emit()
+                return
+            keys = self._k95_quick_zone_keys(zone)
+            if not keys:
+                self._status = "Keine Tasten fuer die Gruppenbearbeitung ausgewaehlt."
+                self.dataChanged.emit()
+                return
+            layers = self._lighting_layer_store(profile)
+            layer = next((item for item in layers if item.get("selected")), None)
+            if layer is None:
+                self._status = "Keine aktive Beleuchtungsschicht ausgewaehlt."
+                self.dataChanged.emit()
+                return
+            layer_zone = str(layer.get("zone") or "all")
+            current_keys = [] if add and layer_zone == "all" else self._k95_quick_zone_keys(layer_zone)
+            if layer_zone == "all" and not add:
+                current_keys = list(K95_OPENRGB_ZONE_ORDER)
+            merged = list(dict.fromkeys([*current_keys, *keys])) if add else [key for key in current_keys if key not in set(keys)]
+            layer["zone"] = self._zone_for_keys(merged)
+            layer["title"] = self._lighting_layer_title_for_zone(str(layer["zone"]))
+            layer["profile"] = profile.name
+            for item in layers:
+                item["selected"] = item is layer
+            self._apply_lighting_layers_to_profile(profile, layers)
+            profile.options["lighting_layers"] = layers
+            self.service.save_profile(profile)
+            self._lighting_layers = layers
+            self._k95_key_colors = self._k95_key_color_map(profile)
+            action = "hinzugefuegt" if add else "entfernt"
+            self._status = f"{len(keys)} Tasten zur aktiven Schicht {action}."
+            if live:
+                try:
+                    result = self.service.write_k95_profile_live(profile.name)
+                    self._status = f"{self._status} K95 Live Write OK: {result.packet_count} packets"
+                except Exception as exc:
+                    self._status = f"{self._status} Live Write fehlgeschlagen: {exc}"
+            self.dataChanged.emit()
+
+        def _zone_for_keys(self, keys: list[str]) -> str:
+            clean = [key for key in dict.fromkeys(keys) if key in K95_OPENRGB_ZONE_ORDER]
+            if not clean:
+                return "keys:"
+            if len(clean) == len(K95_OPENRGB_ZONE_ORDER):
+                return "all"
+            if len(clean) == 1:
+                return f"key:{clean[0]}"
+            return "keys:" + ",".join(clean)
+
+        def _apply_lighting_layers_to_profile(self, profile: Profile, layers: list[dict[str, Any]]) -> None:
+            self._ensure_k95_key_zones(profile)
+            color_by_key = {key: "#04ff00" for key in K95_OPENRGB_ZONE_ORDER}
+            for layer in layers:
+                color = str(layer.get("color") or "#04ff00")
+                for key in self._k95_quick_zone_keys(str(layer.get("zone") or "all")):
+                    color_by_key[key] = color
+            for zone in profile.lighting:
+                keys = zone.keys or ([zone.name] if zone.name in K95_OPENRGB_ZONE_ORDER else [])
+                if keys:
+                    zone.color = color_by_key.get(str(keys[0]).casefold(), zone.color)
+                    zone.mode = "static"
 
         def _reset_deleted_lighting_layer(self, profile: Profile, deleted: dict[str, Any], remaining_layers: list[dict[str, Any]]) -> None:
             keys = self._k95_quick_zone_keys(str(deleted.get("zone") or "all"))

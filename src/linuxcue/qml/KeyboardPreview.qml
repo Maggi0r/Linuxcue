@@ -409,6 +409,7 @@ Item {
         selectedKey = ""
         dragging = false
         selectionRect = { "x": 0, "y": 0, "w": 0, "h": 0 }
+        selectionChanged([])
         overlay.requestPaint()
     }
 
