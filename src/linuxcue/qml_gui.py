@@ -1059,6 +1059,16 @@ if QT_QML_IMPORT_ERROR is None:
                 self._status = f"Virtuoso Live EQ fehlgeschlagen: {exc}"
             self.dataChanged.emit()
 
+        @Slot()
+        def stopVirtuosoLiveEq(self) -> None:
+            try:
+                result = self.service.stop_virtuoso_live_eq()
+                target = result.get("target_sink") or "direkter Ausgang"
+                self._status = f"Virtuoso Live EQ gestoppt. Ausgabe: {target}"
+            except Exception as exc:
+                self._status = f"Virtuoso Live EQ Stop fehlgeschlagen: {exc}"
+            self.dataChanged.emit()
+
         def _profile_subtitle(self, item: dict[str, object]) -> str:
             target = str(item.get("target_device", ""))
             group_role = str(item.get("group_role") or item.get("target_family") or "")

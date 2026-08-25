@@ -48,6 +48,7 @@ def _run_filter_loop(source: subprocess.Popen[bytes], sink: subprocess.Popen[byt
     chunk_bytes = chunk_frames * channels * 2
     last_mtime = 0.0
     filters = _build_filter_bank([0.0] * 10, sample_rate, channels)
+    preamp = 1.0
 
     while True:
         data = source.stdout.read(chunk_bytes)
@@ -58,7 +59,9 @@ def _run_filter_loop(source: subprocess.Popen[bytes], sink: subprocess.Popen[byt
         except OSError:
             mtime = 0.0
         if mtime != last_mtime:
-            filters = _build_filter_bank(_load_bands(state_path), sample_rate, channels)
+            state = _load_state(state_path)
+            filters = _build_filter_bank(state["bands"], sample_rate, channels)
+            preamp = math.pow(10.0, state["preamp_db"] / 20.0)
             last_mtime = mtime
 
         samples = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
@@ -67,6 +70,7 @@ def _run_filter_loop(source: subprocess.Popen[bytes], sink: subprocess.Popen[byt
         frame = samples.reshape((-1, channels))
         for item in filters:
             frame = item.process(frame)
+        frame *= preamp
         output = np.clip(frame * 32767.0, -32768.0, 32767.0).astype(np.int16).tobytes()
         try:
             sink.stdin.write(output)
@@ -75,14 +79,14 @@ def _run_filter_loop(source: subprocess.Popen[bytes], sink: subprocess.Popen[byt
             return sink.poll() or 1
 
 
-def _load_bands(path: Path) -> list[float]:
+def _load_state(path: Path) -> dict[str, object]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return [0.0] * 10
+        return {"bands": [0.0] * 10, "preamp_db": 0.0}
     bands = [float(value) for value in payload.get("bands", [])[:10]]
     bands.extend([0.0] * (10 - len(bands)))
-    return bands
+    return {"bands": bands, "preamp_db": float(payload.get("preamp_db", 0.0))}
 
 
 def _build_filter_bank(bands: list[float], sample_rate: int, channels: int) -> list["Biquad"]:

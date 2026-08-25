@@ -35,7 +35,7 @@ from .pipewire_eq import set_default_virtuoso_eq_sink, restart_pipewire_user_ser
 from .profile_store import ProfileStore
 from .probe_store import ProbeStore
 from .protocol_map import all_capability_maps, capability_map_for_slug
-from .runtime_eq import start_virtuoso_runtime_eq, virtuoso_runtime_eq_running, write_virtuoso_runtime_eq_state
+from .runtime_eq import start_virtuoso_runtime_eq, stop_virtuoso_runtime_eq, virtuoso_runtime_eq_running, write_virtuoso_runtime_eq_state
 from .simulator import plan_apply
 from .transport import LiveHidTransport
 from .virtuoso_monitor import VirtuosoBatteryMonitor, VirtuosoUsbBatteryMonitor
@@ -733,6 +733,9 @@ class LinuxCueService:
             raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
         selected = self._selected_audio_preset(profile, preset_name)
         return start_virtuoso_runtime_eq(profile, selected)
+
+    def stop_virtuoso_live_eq(self) -> dict[str, object]:
+        return stop_virtuoso_runtime_eq()
 
     def update_virtuoso_live_eq(self, name: str, preset_name: str | None = None) -> dict[str, object]:
         profile = self.load_profile(name)

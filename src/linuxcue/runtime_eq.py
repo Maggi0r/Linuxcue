@@ -16,6 +16,7 @@ RUNTIME_EQ_LOG = Path("/tmp/linuxcue-virtuoso-live-eq.log")
 RUNTIME_EQ_SINK = "linuxcue_virtuoso_eq"
 RUNTIME_EQ_MONITOR = f"{RUNTIME_EQ_SINK}.monitor"
 RUNTIME_EQ_DESCRIPTION = "linuxcue Virtuoso EQ"
+DEFAULT_PREAMP_DB = 3.0
 
 
 def write_virtuoso_runtime_eq_state(profile: Profile, preset: AudioPreset, target_sink: str | None = None) -> Path:
@@ -28,6 +29,7 @@ def write_virtuoso_runtime_eq_state(profile: Profile, preset: AudioPreset, targe
         "target_sink": target_sink or _current_target_sink(),
         "sample_rate": 48000,
         "q": 1.41,
+        "preamp_db": DEFAULT_PREAMP_DB,
     }
     RUNTIME_EQ_STATE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return RUNTIME_EQ_STATE
@@ -77,6 +79,33 @@ def start_virtuoso_runtime_eq(profile: Profile, preset: AudioPreset) -> dict[str
         "moved_inputs": moved_inputs,
         "pid": process.pid,
         "log": str(RUNTIME_EQ_LOG),
+    }
+
+
+def stop_virtuoso_runtime_eq() -> dict[str, object]:
+    target_sink = _read_previous_target()
+    if target_sink:
+        _set_default_sink(target_sink)
+        moved_inputs = _move_current_sink_inputs(target_sink)
+    else:
+        moved_inputs = []
+    pid = _read_pid()
+    stopped = False
+    if pid is not None:
+        try:
+            os.kill(pid, 15)
+            stopped = True
+        except OSError:
+            stopped = False
+    try:
+        RUNTIME_EQ_PID.unlink()
+    except OSError:
+        pass
+    return {
+        "stopped": stopped,
+        "running": _helper_running(),
+        "target_sink": target_sink,
+        "moved_inputs": moved_inputs,
     }
 
 
@@ -133,7 +162,7 @@ def _set_default_sink(sink: str) -> dict[str, object]:
     return {"ok": result.returncode == 0, "stderr": result.stderr.strip(), "sink": sink}
 
 
-def _move_current_sink_inputs() -> list[dict[str, object]]:
+def _move_current_sink_inputs(target_sink: str = RUNTIME_EQ_SINK) -> list[dict[str, object]]:
     result = _pactl(["list", "short", "sink-inputs"], check=False)
     moved: list[dict[str, object]] = []
     if result.returncode != 0:
@@ -143,7 +172,7 @@ def _move_current_sink_inputs() -> list[dict[str, object]]:
         if not parts:
             continue
         sink_input = parts[0]
-        move = _pactl(["move-sink-input", sink_input, RUNTIME_EQ_SINK], check=False)
+        move = _pactl(["move-sink-input", sink_input, target_sink], check=False)
         moved.append({"sink_input": sink_input, "ok": move.returncode == 0, "stderr": move.stderr.strip()})
     return moved
 

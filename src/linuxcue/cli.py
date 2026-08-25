@@ -130,6 +130,8 @@ def build_parser() -> argparse.ArgumentParser:
     start_virtuoso_live_eq.add_argument("name", help="Virtuoso profile name")
     start_virtuoso_live_eq.add_argument("--preset", help="Optional EQ preset name. Defaults to the active preset.")
 
+    subparsers.add_parser("stop-virtuoso-live-eq", help="Stop the linuxcue Virtuoso EQ helper and route audio back.")
+
     preview_k95 = subparsers.add_parser("preview-k95", help="Preview the K95 HID frames for a saved profile.")
     preview_k95.add_argument("name", help="Profile name")
 
@@ -450,6 +452,10 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(service.start_virtuoso_live_eq(args.name, preset_name=args.preset), indent=2))
         except RuntimeError as exc:
             parser.error(str(exc))
+        return 0
+
+    if args.command == "stop-virtuoso-live-eq":
+        print(json.dumps(service.stop_virtuoso_live_eq(), indent=2))
         return 0
 
     if args.command == "preview-k95":

@@ -1807,6 +1807,7 @@ ApplicationWindow {
                                     Button { Layout.fillWidth: true; text: "Flat EQ"; onClicked: linuxcue.applyVirtuosoFlatEq() }
                                     Button { Layout.fillWidth: true; text: "Apply Linux EQ"; highlighted: true; onClicked: linuxcue.applyVirtuosoLinuxEq() }
                                     Button { Layout.fillWidth: true; text: "Live EQ starten"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
+                                    Button { Layout.fillWidth: true; text: "Live EQ stoppen"; onClicked: linuxcue.stopVirtuosoLiveEq() }
                                     Rectangle {
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 86
