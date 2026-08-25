@@ -454,6 +454,7 @@ def _key_code_for_name(name: str) -> int:
         "lbracket": 0x2F,
         "rbracket": 0x30,
         "backslash": 0x31,
+        "iso_backslash": 0x64,
         "caps": 0x39,
         "a": 0x04,
         "s": 0x16,

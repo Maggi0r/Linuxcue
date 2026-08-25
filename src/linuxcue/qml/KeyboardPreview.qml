@@ -104,7 +104,7 @@ Item {
         addRow(keys, 424, 78, [["f9", "F9"], ["f10", "F10"], ["f11", "F11"], ["f12", "F12"]])
         addRow(keys, 76, 109, [["grave", "^"], ["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"], ["5", "5"], ["6", "6"], ["7", "7"], ["8", "8"], ["9", "9"], ["0", "0"], ["minus", "\u00df"], ["equals", "\u00b4"], ["backspace", "\u2190", 44]])
         addRow(keys, 76, 140, [["tab", "TAB", 43], ["q", "Q"], ["w", "W"], ["e", "E"], ["r", "R"], ["t", "T"], ["y", "Z"], ["u", "U"], ["i", "I"], ["o", "O"], ["p", "P"], ["lbracket", "\u00dc"], ["rbracket", "+"]])
-        addRow(keys, 76, 171, [["caps", "CAPS", 51], ["a", "A"], ["s", "S"], ["d", "D"], ["f", "F"], ["g", "G"], ["h", "H"], ["j", "J"], ["k", "K"], ["l", "L"], ["semicolon", "\u00d6"], ["quote", "\u00c4"], ["backslash", "#", 22]], 24, 25, 5)
+        addRow(keys, 76, 171, [["caps", "CAPS", 51], ["a", "A"], ["s", "S"], ["d", "D"], ["f", "F"], ["g", "G"], ["h", "H"], ["j", "J"], ["k", "K"], ["l", "L"], ["semicolon", "\u00d6"], ["quote", "\u00c4"], ["iso_backslash", "#", 22]], 24, 25, 5)
         keys.push({ "id": "enter", "label": "ENTER", "x": 486, "y": 140, "w": 48, "h": 56, "isoEnter": true })
         addRow(keys, 76, 202, [["lshift", "SHIFT", 61], ["iso_slash", "<"], ["z", "Y"], ["x", "X"], ["c", "C"], ["v", "V"], ["b", "B"], ["n", "N"], ["m", "M"], ["comma", ","], ["period", "."], ["slash", "-"], ["rshift", "SHIFT", 72]])
         addRow(keys, 76, 233, [["lctrl", "STRG", 39], ["lwin", "WIN"], ["lalt", "ALT"], ["space", "SPACE", 180], ["ralt", "ALTGR", 40], ["rwin", "WIN"], ["menu", "MENU"], ["rctrl", "STRG", 40]])
