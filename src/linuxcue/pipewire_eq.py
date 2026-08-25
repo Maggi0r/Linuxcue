@@ -7,6 +7,19 @@ from .easyeffects_export import ICUE_EQ_FREQUENCIES
 from .models import AudioPreset, Profile
 
 PIPEWIRE_EQ_CONFIG = Path.home() / ".config" / "pipewire" / "pipewire.conf.d" / "90-linuxcue-virtuoso-eq.conf"
+PIPEWIRE_RESTART_UNITS = (
+    "pipewire.service",
+    "pipewire-pulse.service",
+    "wireplumber.service",
+    "pipewire.socket",
+    "pipewire-pulse.socket",
+)
+PIPEWIRE_RUNTIME_UNITS = (
+    "pipewire.service",
+    "pipewire-pulse.service",
+    "pipewire.socket",
+    "pipewire-pulse.socket",
+)
 
 
 def write_virtuoso_pipewire_eq(profile: Profile, preset: AudioPreset, target: Path | None = None) -> Path:
@@ -17,15 +30,44 @@ def write_virtuoso_pipewire_eq(profile: Profile, preset: AudioPreset, target: Pa
 
 
 def restart_pipewire_user_services(timeout: int = 8) -> dict[str, object]:
-    command = ["systemctl", "--user", "restart", "pipewire.service", "pipewire-pulse.service", "wireplumber.service"]
+    available_units = _available_user_units(timeout=timeout)
+    restart_units = [unit for unit in PIPEWIRE_RESTART_UNITS if unit in available_units]
+    has_pipewire_runtime = any(unit in available_units for unit in PIPEWIRE_RUNTIME_UNITS)
+    if not has_pipewire_runtime:
+        return {
+            "command": ["systemctl", "--user", "list-unit-files"],
+            "returncode": 1,
+            "stdout": "",
+            "stderr": (
+                "No PipeWire user service/socket was found. Install or repair PipeWire first: "
+                "sudo pacman -S --needed pipewire pipewire-pulse wireplumber"
+            ),
+            "available_units": sorted(available_units),
+            "restart_units": restart_units,
+            "ok": False,
+        }
+    command = ["systemctl", "--user", "restart", *restart_units]
     result = subprocess.run(command, check=False, capture_output=True, text=True, timeout=timeout)
     return {
         "command": command,
         "returncode": result.returncode,
         "stdout": result.stdout.strip(),
         "stderr": result.stderr.strip(),
+        "available_units": sorted(available_units),
+        "restart_units": restart_units,
         "ok": result.returncode == 0,
     }
+
+
+def _available_user_units(timeout: int = 8) -> set[str]:
+    command = ["systemctl", "--user", "list-unit-files", "--type=service", "--type=socket", "--no-legend"]
+    result = subprocess.run(command, check=False, capture_output=True, text=True, timeout=timeout)
+    units: set[str] = set()
+    for line in result.stdout.splitlines():
+        parts = line.split()
+        if parts:
+            units.add(parts[0])
+    return units
 
 
 def _pipewire_filter_chain_config(profile: Profile, preset: AudioPreset) -> str:

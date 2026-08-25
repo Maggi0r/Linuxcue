@@ -692,8 +692,8 @@ class LinuxCueService:
             reload_result = restart_pipewire_user_services()
             if not reload_result.get("ok"):
                 raise RuntimeError(
-                    "PipeWire config was written, but restarting PipeWire failed. "
-                    f"stderr: {reload_result.get('stderr', '')}"
+                    "PipeWire config was written, but the virtual EQ sink could not be activated yet. "
+                    f"{reload_result.get('stderr', '')}"
                 )
         return {
             "profile": name,
