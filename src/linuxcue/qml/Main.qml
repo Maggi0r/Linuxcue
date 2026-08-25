@@ -55,6 +55,11 @@ ApplicationWindow {
         k95EditingLayerId = ""
     }
 
+    function exitK95LayerEdit() {
+        clearK95Selection()
+        k95KeyboardPreview.clearSelection()
+    }
+
     function resetDeviceViews() {
         clearK95Selection()
         if (typeof k95KeyboardPreview !== "undefined")
@@ -341,8 +346,7 @@ ApplicationWindow {
                         enabled: k95HasSelection
                         onTriggered: {
                             linuxcue.addK95SelectionToLayer(k95SelectedQuickZone, autoLiveWrite)
-                            clearK95Selection()
-                            k95KeyboardPreview.clearSelection()
+                            exitK95LayerEdit()
                         }
                     }
                     MenuItem {
@@ -350,16 +354,14 @@ ApplicationWindow {
                         enabled: k95HasSelection
                         onTriggered: {
                             linuxcue.removeK95SelectionFromLayer(k95SelectedQuickZone, autoLiveWrite)
-                            clearK95Selection()
-                            k95KeyboardPreview.clearSelection()
+                            exitK95LayerEdit()
                         }
                     }
                     MenuSeparator {}
                     MenuItem {
                         text: "Auswahl loeschen"
                         onTriggered: {
-                            clearK95Selection()
-                            k95KeyboardPreview.clearSelection()
+                            exitK95LayerEdit()
                         }
                     }
                 }
@@ -553,6 +555,10 @@ ApplicationWindow {
                                         colorValue: modelData.color
                                         selected: modelData.selected
                                         onClicked: function(layerId) {
+                                            if (k95EditingLayerId === layerId) {
+                                                exitK95LayerEdit()
+                                                return
+                                            }
                                             linuxcue.selectLightingLayer(layerId)
                                             k95EditingLayerId = layerId
                                             selectedColor = modelData.color
@@ -633,10 +639,7 @@ ApplicationWindow {
                             MouseArea {
                                 anchors.fill: parent
                                 acceptedButtons: Qt.LeftButton
-                                onClicked: {
-                                    clearK95Selection()
-                                    k95KeyboardPreview.clearSelection()
-                                }
+                                onClicked: {}
                             }
 
                             Text {
@@ -691,6 +694,10 @@ ApplicationWindow {
                                 selectedKey: k95SelectedKey
                                 selectedKeys: k95SelectedKeys
                                 onSelectionChanged: function(keys) {
+                                    if (k95EditingLayerId !== "" && keys.length === 0) {
+                                        k95KeyboardPreview.setSelection(k95SelectedKeys, false)
+                                        return
+                                    }
                                     k95SelectedKeys = keys
                                     k95SelectedKey = keys.length === 1 ? keys[0] : ""
                                     k95SelectedQuickZone = keys.length === 0 ? "all" : (keys.length === 1 ? "key:" + keys[0] : "keys:" + keys.join(","))
@@ -699,8 +706,6 @@ ApplicationWindow {
                                     k95SelectedEffect = keys.length > 0 ? "Statische Farbe" : ""
                                     if (k95EditingLayerId !== "" && keys.length > 0)
                                         linuxcue.setK95LightingLayerKeys(k95EditingLayerId, k95SelectedQuickZone, autoLiveWrite)
-                                    if (keys.length === 0)
-                                        k95EditingLayerId = ""
                                 }
                             }
                         }
