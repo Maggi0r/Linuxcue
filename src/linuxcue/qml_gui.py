@@ -1299,7 +1299,9 @@ if QT_QML_IMPORT_ERROR is None:
                     elif result.get("needs_activation"):
                         self.statusReady.emit("Native PipeWire EQ gespeichert. Bitte einmal Native PipeWire EQ aktivieren.")
                     else:
-                        self.statusReady.emit(f"Native PipeWire EQ Live-Update fehlgeschlagen: {result.get('stderr') or result.get('message')}")
+                        attempts = result.get("attempts") or []
+                        last = attempts[-1] if attempts else {}
+                        self.statusReady.emit(f"Native PipeWire Live-Update abgelehnt: {last.get('label', 'set-param')}. Doctor ausfuehren.")
                 elif backend == "easyeffects":
                     result = self.service.apply_virtuoso_easyeffects(profile_name)
                     self.statusReady.emit(f"Virtuoso Linux EQ aktiv: {result.get('preset', 'Preset')}")

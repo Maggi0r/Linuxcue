@@ -30,27 +30,21 @@ def apply_virtuoso_native_pipewire_eq(profile: Profile, preset: AudioPreset) -> 
             "message": "linuxcue PipeWire EQ node is not running yet. Activate it once with the PipeWire EQ button.",
         }
     graph = _runtime_filter_graph(preset)
-    set_result = _pw_cli(
-        [
-            "set-param",
-            str(node["id"]),
-            "Props",
-            json.dumps({"filter.graph": graph}, separators=(",", ":")),
-        ],
-        check=False,
-    )
-    route_result = set_default_virtuoso_eq_sink() if set_result.returncode == 0 else None
+    attempts = _try_live_update_payloads(str(node["id"]), graph)
+    success = next((attempt for attempt in attempts if attempt["ok"]), None)
+    route_result = set_default_virtuoso_eq_sink() if success is not None else None
     enum_result = _pw_cli(["enum-params", str(node["id"]), "Props"], check=False)
     return {
-        "ok": set_result.returncode == 0,
+        "ok": success is not None,
         "config": str(config_path),
         "node": node,
-        "command": set_result.args,
-        "stdout": set_result.stdout.strip(),
-        "stderr": set_result.stderr.strip(),
+        "attempts": attempts,
+        "command": success["command"] if success else attempts[-1]["command"],
+        "stdout": success["stdout"] if success else attempts[-1]["stdout"],
+        "stderr": "" if success else attempts[-1]["stderr"],
         "route": route_result,
         "enum_props": enum_result.stdout[-4000:],
-        "message": "Native PipeWire EQ updated." if set_result.returncode == 0 else "PipeWire rejected live EQ parameter update.",
+        "message": "Native PipeWire EQ updated." if success else "PipeWire rejected live EQ parameter update.",
     }
 
 
@@ -102,6 +96,35 @@ def _runtime_filter_graph(preset: AudioPreset) -> dict[str, object]:
         "inputs": ["eq:In 1", "eq:In 2"],
         "outputs": ["eq:Out 1", "eq:Out 2"],
     }
+
+
+def _try_live_update_payloads(node_id: str, graph: dict[str, object]) -> list[dict[str, object]]:
+    payloads = [
+        ("Props/filter.graph", "Props", {"filter.graph": graph}),
+        ("Props/node.param.Props", "Props", {"node.param.Props": {"filter.graph": graph}}),
+        ("Props/params-array", "Props", {"params": ["filter.graph", graph]}),
+        ("Props/filter-graph-flat", "Props", {"filter.graph.nodes": graph["nodes"], "filter.graph.inputs": graph["inputs"], "filter.graph.outputs": graph["outputs"]}),
+        ("Param/filter.graph", "Param", {"filter.graph": graph}),
+    ]
+    attempts: list[dict[str, object]] = []
+    for label, param, payload in payloads:
+        encoded = json.dumps(payload, separators=(",", ":"))
+        result = _pw_cli(["set-param", node_id, param, encoded], check=False)
+        attempts.append(
+            {
+                "label": label,
+                "param": param,
+                "payload": encoded,
+                "command": result.args,
+                "returncode": result.returncode,
+                "stdout": result.stdout.strip(),
+                "stderr": result.stderr.strip(),
+                "ok": result.returncode == 0,
+            }
+        )
+        if result.returncode == 0:
+            break
+    return attempts
 
 
 def _bands(preset: AudioPreset) -> list[float]:
