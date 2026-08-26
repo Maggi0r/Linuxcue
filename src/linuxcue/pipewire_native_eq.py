@@ -33,8 +33,8 @@ def apply_virtuoso_native_pipewire_eq(profile: Profile, preset: AudioPreset) -> 
             "needs_activation": True,
             "message": "linuxcue PipeWire EQ node is not running yet. Activate it once with the PipeWire EQ button.",
         }
-    graph = _runtime_filter_graph(preset)
-    attempts = _try_live_update_payloads(str(node["id"]), graph)
+    control_params = _runtime_control_params(preset)
+    attempts = _try_live_update_payloads(str(node["id"]), control_params, _runtime_filter_graph(preset))
     success = next((attempt for attempt in attempts if attempt["ok"]), None)
     route_result = set_default_virtuoso_eq_sink() if success is not None else None
     enum_result = _pw_cli(["enum-params", str(node["id"]), "Props"], check=False)
@@ -124,29 +124,39 @@ def _node_match_score(node_name: str, description: str, media_name: str, block_c
 
 def _runtime_filter_graph(preset: AudioPreset) -> dict[str, object]:
     filters = [
-        {"type": "bq_peaking", "freq": frequency, "gain": gain, "q": 1.41}
-        for frequency, gain in zip(ICUE_EQ_FREQUENCIES, _bands(preset))
+        {
+            "type": "builtin",
+            "name": f"band{index}",
+            "label": "bq_peaking",
+            "control": {"Freq": frequency, "Q": 1.41, "Gain": gain},
+        }
+        for index, (frequency, gain) in enumerate(zip(ICUE_EQ_FREQUENCIES, _bands(preset)), start=1)
+    ]
+    links = [
+        {"output": f"band{index}:Out", "input": f"band{index + 1}:In"}
+        for index in range(1, len(filters))
     ]
     return {
-        "nodes": [
-            {
-                "type": "builtin",
-                "name": "eq",
-                "label": "param_eq",
-                "config": {"filters": filters},
-            }
-        ],
-        "inputs": ["eq:In 1", "eq:In 2"],
-        "outputs": ["eq:Out 1", "eq:Out 2"],
+        "nodes": filters,
+        "links": links,
     }
 
 
-def _try_live_update_payloads(node_id: str, graph: dict[str, object]) -> list[dict[str, object]]:
+def _runtime_control_params(preset: AudioPreset) -> list[object]:
+    params: list[object] = []
+    for index, gain in enumerate(_bands(preset), start=1):
+        params.extend([f"band{index}:Gain", float(gain)])
+    return params
+
+
+def _try_live_update_payloads(node_id: str, control_params: list[object], graph: dict[str, object]) -> list[dict[str, object]]:
     payloads = [
+        ("Props/control-params", "Props", {"params": control_params}),
+        ("Props/control", "Props", {"control": {str(control_params[index]): control_params[index + 1] for index in range(0, len(control_params), 2)}}),
         ("Props/filter.graph", "Props", {"filter.graph": graph}),
         ("Props/node.param.Props", "Props", {"node.param.Props": {"filter.graph": graph}}),
         ("Props/params-array", "Props", {"params": ["filter.graph", graph]}),
-        ("Props/filter-graph-flat", "Props", {"filter.graph.nodes": graph["nodes"], "filter.graph.inputs": graph["inputs"], "filter.graph.outputs": graph["outputs"]}),
+        ("Props/filter-graph-flat", "Props", {"filter.graph.nodes": graph["nodes"], "filter.graph.links": graph["links"]}),
         ("Param/filter.graph", "Param", {"filter.graph": graph}),
     ]
     attempts: list[dict[str, object]] = []
