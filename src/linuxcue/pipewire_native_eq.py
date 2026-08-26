@@ -11,6 +11,8 @@ from .pipewire_eq import PIPEWIRE_EQ_CONFIG, set_default_virtuoso_eq_sink, write
 
 
 PIPEWIRE_EQ_NODE_NAMES = (
+    "linuxcue_virtuoso_eq",
+    "linuxcue Virtuoso EQ",
     "effect_input.linuxcue_virtuoso_eq",
     "effect_output.linuxcue_virtuoso_eq",
 )
@@ -53,7 +55,13 @@ def pipewire_native_eq_doctor() -> dict[str, object]:
         return {"ok": False, "error": "pw-cli was not found"}
     node = _find_eq_node()
     if node is None:
-        return {"ok": False, "node": None, "config": str(PIPEWIRE_EQ_CONFIG)}
+        return {
+            "ok": False,
+            "node": None,
+            "config": str(PIPEWIRE_EQ_CONFIG),
+            "pactl_sinks": _pactl(["list", "short", "sinks"], check=False).stdout[-8000:] if shutil.which("pactl") else "",
+            "nodes": _pw_cli(["ls", "Node"], check=False).stdout[-12000:],
+        }
     return {
         "ok": True,
         "node": node,
@@ -68,14 +76,23 @@ def _find_eq_node() -> dict[str, object] | None:
         return None
     blocks = re.split(r"\n(?=id \d+,)", result.stdout)
     for block in blocks:
-        if not any(name in block for name in PIPEWIRE_EQ_NODE_NAMES):
+        block_casefold = block.casefold()
+        if not any(name.casefold() in block_casefold for name in PIPEWIRE_EQ_NODE_NAMES):
             continue
         match = re.search(r"id (\d+),", block)
         if not match:
             continue
         node_name = _extract_quoted_property(block, "node.name")
         description = _extract_quoted_property(block, "node.description")
-        return {"id": int(match.group(1)), "node_name": node_name, "description": description}
+        media_name = _extract_quoted_property(block, "media.name")
+        return {
+            "id": int(match.group(1)),
+            "node_name": node_name,
+            "description": description,
+            "media_name": media_name,
+            "matched": next((name for name in PIPEWIRE_EQ_NODE_NAMES if name.casefold() in block_casefold), ""),
+            "block": block[-4000:],
+        }
     return None
 
 
@@ -148,8 +165,15 @@ def _bands(preset: AudioPreset) -> list[float]:
 
 
 def _extract_quoted_property(block: str, key: str) -> str:
-    match = re.search(rf"{re.escape(key)}\\s*=\\s*\"([^\"]*)\"", block)
+    match = re.search(rf"{re.escape(key)}\s*=\s*\"([^\"]*)\"", block)
     return match.group(1) if match else ""
+
+
+def _pactl(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(["pactl", *args], check=False, capture_output=True, text=True, timeout=5)
+    if check and result.returncode != 0:
+        raise RuntimeError(f"pactl {' '.join(args)} failed: {result.stderr.strip()}")
+    return result
 
 
 def _pw_cli(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
