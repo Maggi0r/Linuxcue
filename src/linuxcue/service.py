@@ -32,6 +32,7 @@ from .virtuoso_backend import (
 from .known_devices import TARGET_DEVICES, known_device_by_slug, mock_probe_for_slug, support_for_product
 from .models import Device, ProbeData, Profile
 from .pipewire_eq import set_default_virtuoso_eq_sink, restart_pipewire_user_services, write_virtuoso_pipewire_eq
+from .pipewire_native_eq import apply_virtuoso_native_pipewire_eq, pipewire_native_eq_doctor
 from .profile_store import ProfileStore
 from .probe_store import ProbeStore
 from .protocol_map import all_capability_maps, capability_map_for_slug
@@ -736,6 +737,20 @@ class LinuxCueService:
 
     def stop_virtuoso_live_eq(self) -> dict[str, object]:
         return stop_virtuoso_runtime_eq()
+
+    def apply_virtuoso_native_pipewire_eq(self, name: str, preset_name: str | None = None) -> dict[str, object]:
+        if not sys.platform.startswith("linux"):
+            raise RuntimeError("Native PipeWire EQ control is only supported on Linux/PipeWire.")
+        profile = self.load_profile(name)
+        if profile is None:
+            raise RuntimeError(f"Profile not found: {name}")
+        if profile.target_device != "virtuoso-se":
+            raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
+        selected = self._selected_audio_preset(profile, preset_name)
+        return apply_virtuoso_native_pipewire_eq(profile, selected)
+
+    def pipewire_native_eq_doctor(self) -> dict[str, object]:
+        return pipewire_native_eq_doctor()
 
     def update_virtuoso_live_eq(self, name: str, preset_name: str | None = None) -> dict[str, object]:
         profile = self.load_profile(name)

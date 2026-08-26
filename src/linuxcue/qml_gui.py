@@ -1053,10 +1053,10 @@ if QT_QML_IMPORT_ERROR is None:
             profile.options["virtuoso_eq_backend"] = "pipewire"
             self.service.save_profile(profile)
             try:
-                result = self.service.start_virtuoso_live_eq(profile.name)
-                self._status = f"Virtuoso Live EQ aktiv: {result.get('target_sink', 'Audio')}"
+                result = self.service.apply_virtuoso_pipewire_eq(profile.name)
+                self._status = f"Native PipeWire EQ aktiviert: {result.get('preset', 'Preset')}"
             except Exception as exc:
-                self._status = f"Virtuoso Live EQ fehlgeschlagen: {exc}"
+                self._status = f"Native PipeWire EQ Aktivierung fehlgeschlagen: {exc}"
             self.dataChanged.emit()
 
         @Slot()
@@ -1293,16 +1293,20 @@ if QT_QML_IMPORT_ERROR is None:
             try:
                 backend = self._virtuoso_eq_backend_for_profile(profile_name)
                 if backend == "pipewire":
-                    result = self.service.update_virtuoso_live_eq(profile_name)
-                    suffix = "" if result.get("running") else " (Live EQ ist gestoppt)"
-                    self.statusReady.emit(f"Virtuoso EQ gespeichert: {result.get('preset', 'Preset')}{suffix}")
+                    result = self.service.apply_virtuoso_native_pipewire_eq(profile_name)
+                    if result.get("ok"):
+                        self.statusReady.emit(f"Native PipeWire EQ live aktualisiert: {result.get('node', {}).get('node_name', 'EQ')}")
+                    elif result.get("needs_activation"):
+                        self.statusReady.emit("Native PipeWire EQ gespeichert. Bitte einmal Native PipeWire EQ aktivieren.")
+                    else:
+                        self.statusReady.emit(f"Native PipeWire EQ Live-Update fehlgeschlagen: {result.get('stderr') or result.get('message')}")
                 elif backend == "easyeffects":
                     result = self.service.apply_virtuoso_easyeffects(profile_name)
                     self.statusReady.emit(f"Virtuoso Linux EQ aktiv: {result.get('preset', 'Preset')}")
                 else:
                     self.statusReady.emit("Virtuoso EQ gespeichert. Audio bleibt auf direktem Ausgang.")
             except Exception as exc:
-                backend_label = "Virtuoso EQ" if self._virtuoso_eq_backend_for_profile(profile_name) == "pipewire" else "Virtuoso Linux EQ"
+                backend_label = "Native PipeWire EQ" if self._virtuoso_eq_backend_for_profile(profile_name) == "pipewire" else "Virtuoso Linux EQ"
                 self.statusReady.emit(f"{backend_label} fehlgeschlagen: {exc}")
             next_profile: str | None = None
             with self._virtuoso_eq_apply_lock:

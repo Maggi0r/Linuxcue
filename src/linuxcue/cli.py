@@ -131,6 +131,7 @@ def build_parser() -> argparse.ArgumentParser:
     start_virtuoso_live_eq.add_argument("--preset", help="Optional EQ preset name. Defaults to the active preset.")
 
     subparsers.add_parser("stop-virtuoso-live-eq", help="Stop the linuxcue Virtuoso EQ helper and route audio back.")
+    subparsers.add_parser("pipewire-native-eq-doctor", help="Inspect the native PipeWire EQ node and live-update params.")
 
     preview_k95 = subparsers.add_parser("preview-k95", help="Preview the K95 HID frames for a saved profile.")
     preview_k95.add_argument("name", help="Profile name")
@@ -456,6 +457,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "stop-virtuoso-live-eq":
         print(json.dumps(service.stop_virtuoso_live_eq(), indent=2))
+        return 0
+
+    if args.command == "pipewire-native-eq-doctor":
+        print(json.dumps(service.pipewire_native_eq_doctor(), indent=2))
         return 0
 
     if args.command == "preview-k95":

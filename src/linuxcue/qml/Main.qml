@@ -1806,7 +1806,7 @@ ApplicationWindow {
                                     }
                                     Button { Layout.fillWidth: true; text: "Flat EQ"; onClicked: linuxcue.applyVirtuosoFlatEq() }
                                     Button { Layout.fillWidth: true; text: "Apply Linux EQ"; highlighted: true; onClicked: linuxcue.applyVirtuosoLinuxEq() }
-                                    Button { Layout.fillWidth: true; text: "Live EQ testen"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
+                                    Button { Layout.fillWidth: true; text: "Native PipeWire EQ aktivieren"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
                                     Button { Layout.fillWidth: true; text: "Live EQ stoppen"; onClicked: linuxcue.stopVirtuosoLiveEq() }
                                     Rectangle {
                                         Layout.fillWidth: true
@@ -1817,7 +1817,7 @@ ApplicationWindow {
                                         Text {
                                             anchors.fill: parent
                                             anchors.margins: 12
-                                            text: "Direkter Virtuoso-Ausgang bleibt empfohlen. Live EQ ist experimentell; Stop schaltet sauber zurueck."
+                                            text: "Native PipeWire EQ nutzt PipeWires param_eq. Nach einmaliger Aktivierung sollen Slider live per pw-cli aktualisieren."
                                             color: "#d7edf0"
                                             wrapMode: Text.WordWrap
                                             font.pixelSize: 12
