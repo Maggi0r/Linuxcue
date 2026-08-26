@@ -16,6 +16,8 @@ PIPEWIRE_EQ_NODE_NAMES = (
     "effect_input.linuxcue_virtuoso_eq",
     "effect_output.linuxcue_virtuoso_eq",
 )
+PIPEWIRE_EQ_INPUT_NODE = "effect_input.linuxcue_virtuoso_eq"
+PIPEWIRE_EQ_OUTPUT_NODE = "effect_output.linuxcue_virtuoso_eq"
 
 
 def apply_virtuoso_native_pipewire_eq(profile: Profile, preset: AudioPreset) -> dict[str, object]:
@@ -65,35 +67,59 @@ def pipewire_native_eq_doctor() -> dict[str, object]:
     return {
         "ok": True,
         "node": node,
+        "candidates": _find_eq_node_candidates(),
         "props": _pw_cli(["enum-params", str(node["id"]), "Props"], check=False).stdout[-8000:],
         "all_params": _pw_cli(["enum-params", str(node["id"]), "all"], check=False).stdout[-8000:],
     }
 
 
 def _find_eq_node() -> dict[str, object] | None:
+    candidates = _find_eq_node_candidates()
+    return candidates[0] if candidates else None
+
+
+def _find_eq_node_candidates() -> list[dict[str, object]]:
     result = _pw_cli(["ls", "Node"], check=False)
     if result.returncode != 0:
-        return None
-    blocks = re.split(r"\n(?=id \d+,)", result.stdout)
+        return []
+    blocks = re.split(r"\n\s*(?=id \d+,)", result.stdout)
+    candidates: list[dict[str, object]] = []
     for block in blocks:
         block_casefold = block.casefold()
         if not any(name.casefold() in block_casefold for name in PIPEWIRE_EQ_NODE_NAMES):
             continue
-        match = re.search(r"id (\d+),", block)
+        match = re.search(r"^\s*id (\d+),", block)
         if not match:
             continue
         node_name = _extract_quoted_property(block, "node.name")
         description = _extract_quoted_property(block, "node.description")
         media_name = _extract_quoted_property(block, "media.name")
-        return {
+        matched = next((name for name in PIPEWIRE_EQ_NODE_NAMES if name.casefold() in block_casefold), "")
+        candidate = {
             "id": int(match.group(1)),
             "node_name": node_name,
             "description": description,
             "media_name": media_name,
-            "matched": next((name for name in PIPEWIRE_EQ_NODE_NAMES if name.casefold() in block_casefold), ""),
+            "matched": matched,
+            "score": _node_match_score(node_name, description, media_name, block_casefold),
             "block": block[-4000:],
         }
-    return None
+        candidates.append(candidate)
+    return sorted(candidates, key=lambda item: int(item["score"]), reverse=True)
+
+
+def _node_match_score(node_name: str, description: str, media_name: str, block_casefold: str) -> int:
+    if node_name == PIPEWIRE_EQ_INPUT_NODE:
+        return 100
+    if node_name == PIPEWIRE_EQ_OUTPUT_NODE:
+        return 90
+    if "linuxcue virtuoso eq" in description.casefold():
+        return 80
+    if "linuxcue virtuoso eq" in media_name.casefold():
+        return 70
+    if "linuxcue_virtuoso_eq" in block_casefold:
+        return 20
+    return 0
 
 
 def _runtime_filter_graph(preset: AudioPreset) -> dict[str, object]:
