@@ -1806,7 +1806,7 @@ ApplicationWindow {
                                     }
                                     Button { Layout.fillWidth: true; text: "Flat EQ"; onClicked: linuxcue.applyVirtuosoFlatEq() }
                                     Button { Layout.fillWidth: true; text: "Apply Linux EQ"; highlighted: true; onClicked: linuxcue.applyVirtuosoLinuxEq() }
-                                    Button { Layout.fillWidth: true; text: "Live EQ starten"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
+                                    Button { Layout.fillWidth: true; text: "Live EQ testen"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
                                     Button { Layout.fillWidth: true; text: "Live EQ stoppen"; onClicked: linuxcue.stopVirtuosoLiveEq() }
                                     Rectangle {
                                         Layout.fillWidth: true
@@ -1817,7 +1817,7 @@ ApplicationWindow {
                                         Text {
                                             anchors.fill: parent
                                             anchors.margins: 12
-                                            text: "Live EQ nutzt einen linuxcue Audio-Helper. Slider starten/aktualisieren ihn direkt ohne EasyEffects und ohne PipeWire-Neustart."
+                                            text: "Direkter Virtuoso-Ausgang bleibt empfohlen. Live EQ ist experimentell; Stop schaltet sauber zurueck."
                                             color: "#d7edf0"
                                             wrapMode: Text.WordWrap
                                             font.pixelSize: 12

@@ -99,7 +99,7 @@ if QT_QML_IMPORT_ERROR is None:
             self._virtuoso_mic_level = 72
             self._virtuoso_sleep_timer = 20
             self._virtuoso_voice_prompts = True
-            self._virtuoso_eq_backend = "pipewire"
+            self._virtuoso_eq_backend = "profile"
             self._m65_lighting_zones: list[dict[str, Any]] = []
             self._m65_dpi_presets: list[dict[str, Any]] = []
             self._m65_dpi_stages: list[dict[str, Any]] = []
@@ -1063,6 +1063,11 @@ if QT_QML_IMPORT_ERROR is None:
         def stopVirtuosoLiveEq(self) -> None:
             try:
                 result = self.service.stop_virtuoso_live_eq()
+                profile = self._active_profile_for_target("virtuoso-se")
+                if profile is not None:
+                    profile.options["virtuoso_eq_backend"] = "profile"
+                    self.service.save_profile(profile)
+                self._virtuoso_eq_backend = "profile"
                 target = result.get("target_sink") or "direkter Ausgang"
                 self._status = f"Virtuoso Live EQ gestoppt. Ausgabe: {target}"
             except Exception as exc:
@@ -1243,7 +1248,7 @@ if QT_QML_IMPORT_ERROR is None:
                 profile.audio[0].active = True
             if profile.headset is None:
                 profile.headset = HeadsetSetting()
-            profile.options.setdefault("virtuoso_eq_backend", "pipewire")
+            profile.options.setdefault("virtuoso_eq_backend", "profile")
             self._virtuoso_accent_zone(profile)
 
         def _active_virtuoso_preset(self, profile: Profile) -> AudioPreset:
@@ -1289,12 +1294,15 @@ if QT_QML_IMPORT_ERROR is None:
                 backend = self._virtuoso_eq_backend_for_profile(profile_name)
                 if backend == "pipewire":
                     result = self.service.update_virtuoso_live_eq(profile_name)
-                    self.statusReady.emit(f"Virtuoso Live EQ aktualisiert: {result.get('preset', 'Preset')}")
-                else:
+                    suffix = "" if result.get("running") else " (Live EQ ist gestoppt)"
+                    self.statusReady.emit(f"Virtuoso EQ gespeichert: {result.get('preset', 'Preset')}{suffix}")
+                elif backend == "easyeffects":
                     result = self.service.apply_virtuoso_easyeffects(profile_name)
                     self.statusReady.emit(f"Virtuoso Linux EQ aktiv: {result.get('preset', 'Preset')}")
+                else:
+                    self.statusReady.emit("Virtuoso EQ gespeichert. Audio bleibt auf direktem Ausgang.")
             except Exception as exc:
-                backend_label = "Virtuoso Live EQ" if self._virtuoso_eq_backend_for_profile(profile_name) == "pipewire" else "Virtuoso Linux EQ"
+                backend_label = "Virtuoso EQ" if self._virtuoso_eq_backend_for_profile(profile_name) == "pipewire" else "Virtuoso Linux EQ"
                 self.statusReady.emit(f"{backend_label} fehlgeschlagen: {exc}")
             next_profile: str | None = None
             with self._virtuoso_eq_apply_lock:
@@ -1311,7 +1319,11 @@ if QT_QML_IMPORT_ERROR is None:
             if profile is None:
                 return self._virtuoso_eq_backend
             backend = str(profile.options.get("virtuoso_eq_backend") or self._virtuoso_eq_backend).casefold()
-            return "easyeffects" if backend == "easyeffects" else "pipewire"
+            if backend == "easyeffects":
+                return "easyeffects"
+            if backend == "pipewire":
+                return "pipewire"
+            return "profile"
 
         def _refresh_m65_state(self) -> None:
             profile = self._active_profile_for_target("m65")

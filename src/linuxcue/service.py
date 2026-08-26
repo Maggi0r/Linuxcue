@@ -744,14 +744,13 @@ class LinuxCueService:
         if profile.target_device != "virtuoso-se":
             raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
         selected = self._selected_audio_preset(profile, preset_name)
-        if not virtuoso_runtime_eq_running():
-            return self.start_virtuoso_live_eq(name, preset_name=preset_name)
         path = write_virtuoso_runtime_eq_state(profile, selected)
         return {
             "profile": name,
             "preset": selected.name,
             "backend": "linuxcue live EQ helper",
             "state": str(path),
+            "running": virtuoso_runtime_eq_running(),
         }
 
     def easyeffects_doctor(self) -> dict[str, object]:
