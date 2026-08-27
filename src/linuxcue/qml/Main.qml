@@ -503,7 +503,9 @@ ApplicationWindow {
 
             RowLayout {
                 Layout.fillWidth: true
-                height: 92
+                Layout.preferredHeight: 92
+                Layout.minimumHeight: 92
+                Layout.maximumHeight: 92
                 spacing: 10
 
                 Repeater {
@@ -1446,11 +1448,13 @@ ApplicationWindow {
                         Layout.maximumWidth: 260
                         Layout.minimumWidth: 260
                         Layout.fillHeight: true
+                        Layout.alignment: Qt.AlignTop
                         spacing: 10
 
                         Panel {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 260
+                            Layout.alignment: Qt.AlignTop
                             title: "VIRTUOSO SE"
                             Item {
                                 anchors.fill: parent
