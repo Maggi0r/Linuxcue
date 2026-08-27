@@ -29,6 +29,7 @@ from .k95_backend import K95_OPENRGB_ZONE_ORDER
 from .m65_backend import M65_RGB_ZONES
 from .m65_monitor import M65DpiInputMonitor
 from .models import AudioPreset, CoolingChannel, DpiStage, HeadsetSetting, LightingZone, Profile
+from .easyeffects_export import ICUE_EQ_FREQUENCIES
 
 M65_DPI_ORDER = ("stage1", "stage2", "stage3", "stage4", "stage5", "sniper")
 M65_DPI_DEFAULTS: dict[str, tuple[int, str]] = {
@@ -40,8 +41,10 @@ M65_DPI_DEFAULTS: dict[str, tuple[int, str]] = {
     "sniper": (400, "#1ecfdf"),
 }
 M65_DPI_DEFAULT_ACTIVE = "stage2"
-VIRTUOSO_EQ_MIN = -36
-VIRTUOSO_EQ_MAX = 36
+VIRTUOSO_EQ_MIN = -48
+VIRTUOSO_EQ_MAX = 48
+VIRTUOSO_EQ_LABELS = ["31", "45", "63", "90", "125", "180", "250", "355", "500", "710", "1k", "2k", "4k", "8k", "16k"]
+VIRTUOSO_LOUDNESS_BANDS = [7, 6, 5, 4, 3, 1, 0, -1, -1, 0, 1, 3, 5, 6, 5]
 
 
 def _device_slug(target: str, family: str) -> str:
@@ -93,7 +96,7 @@ if QT_QML_IMPORT_ERROR is None:
             self._lighting_layers: list[dict[str, Any]] = []
             self._k95_key_colors: dict[str, str] = {}
             self._virtuoso_presets: list[dict[str, Any]] = []
-            self._virtuoso_eq_bands: list[int] = [0] * 10
+            self._virtuoso_eq_bands: list[int] = [0] * len(ICUE_EQ_FREQUENCIES)
             self._virtuoso_accent_color = "#1ecfdf"
             self._virtuoso_sidetone = 35
             self._virtuoso_mic_level = 72
@@ -141,6 +144,10 @@ if QT_QML_IMPORT_ERROR is None:
         @Property("QVariantList", notify=dataChanged)
         def virtuosoEqBands(self) -> list[int]:
             return self._virtuoso_eq_bands
+
+        @Property("QVariantList", notify=dataChanged)
+        def virtuosoEqBandLabels(self) -> list[str]:
+            return VIRTUOSO_EQ_LABELS
 
         @Property(str, notify=dataChanged)
         def virtuosoAccentColor(self) -> str:
@@ -457,6 +464,8 @@ if QT_QML_IMPORT_ERROR is None:
                 self.dataChanged.emit()
                 return
             command = (
+                ": >/tmp/linuxcue-restart.log; : >/tmp/linuxcue-gui-restart.log; "
+                "echo \"Update terminal started $(date)\" >>/tmp/linuxcue-restart.log; "
                 "linuxcue install-update --yes; "
                 "status=$?; echo; "
                 "if [ $status -eq 0 ]; then echo 'linuxcue Update abgeschlossen. Starte linuxcue neu...'; "
@@ -1046,14 +1055,35 @@ if QT_QML_IMPORT_ERROR is None:
             self._ensure_virtuoso_defaults(profile)
             flat = next((preset for preset in profile.audio if preset.name.casefold() == "flat"), None)
             if flat is None:
-                flat = AudioPreset(name="Flat", active=False, bands=[0] * 10)
+                flat = AudioPreset(name="Flat", active=False, bands=[0] * len(ICUE_EQ_FREQUENCIES))
                 profile.audio.append(flat)
-            flat.bands = [0] * 10
+            flat.bands = [0] * len(ICUE_EQ_FREQUENCIES)
             for preset in profile.audio:
                 preset.active = preset is flat
             self.service.save_profile(profile)
             self._refresh_virtuoso_state()
             self._status = "Virtuoso Flat EQ gespeichert."
+            self._apply_virtuoso_eq(profile.name)
+            self.dataChanged.emit()
+
+        @Slot()
+        def applyVirtuosoLoudnessEq(self) -> None:
+            profile = self._active_profile_for_target("virtuoso-se")
+            if profile is None:
+                self._status = "Kein Virtuoso-Profil aktiv."
+                self.dataChanged.emit()
+                return
+            self._ensure_virtuoso_defaults(profile)
+            loudness = next((preset for preset in profile.audio if preset.name.casefold() == "loudness"), None)
+            if loudness is None:
+                loudness = AudioPreset(name="Loudness", active=False, bands=list(VIRTUOSO_LOUDNESS_BANDS))
+                profile.audio.append(loudness)
+            loudness.bands = list(VIRTUOSO_LOUDNESS_BANDS)
+            for preset in profile.audio:
+                preset.active = preset is loudness
+            self.service.save_profile(profile)
+            self._refresh_virtuoso_state()
+            self._status = "Virtuoso Loudness EQ gespeichert."
             self._apply_virtuoso_eq(profile.name)
             self.dataChanged.emit()
 
@@ -1246,7 +1276,7 @@ if QT_QML_IMPORT_ERROR is None:
             profile = self._active_profile_for_target("virtuoso-se")
             if profile is None:
                 self._virtuoso_presets = []
-                self._virtuoso_eq_bands = [0] * 10
+                self._virtuoso_eq_bands = [0] * len(ICUE_EQ_FREQUENCIES)
                 self._virtuoso_accent_color = "#1ecfdf"
                 self._virtuoso_sidetone = 35
                 self._virtuoso_mic_level = 72
@@ -1268,7 +1298,9 @@ if QT_QML_IMPORT_ERROR is None:
 
         def _ensure_virtuoso_defaults(self, profile: Profile) -> None:
             if not profile.audio:
-                profile.audio = [AudioPreset(name="Custom", active=True, bands=[0] * 10)]
+                profile.audio = [AudioPreset(name="Custom", active=True, bands=[0] * len(ICUE_EQ_FREQUENCIES))]
+            for preset in profile.audio:
+                preset.bands = self._virtuoso_bands(preset)
             if not any(preset.active for preset in profile.audio):
                 profile.audio[0].active = True
             if profile.headset is None:
@@ -1281,7 +1313,7 @@ if QT_QML_IMPORT_ERROR is None:
 
         def _virtuoso_bands(self, preset: AudioPreset) -> list[int]:
             if preset.bands:
-                values = [int(value) for value in preset.bands[:10]]
+                values = [int(value) for value in preset.bands[: len(ICUE_EQ_FREQUENCIES)]]
             else:
                 values = [
                     preset.bass,
@@ -1295,8 +1327,8 @@ if QT_QML_IMPORT_ERROR is None:
                     preset.treble,
                     preset.treble,
                 ]
-            values.extend([0] * (10 - len(values)))
-            return [max(VIRTUOSO_EQ_MIN, min(VIRTUOSO_EQ_MAX, int(value))) for value in values[:10]]
+            values.extend([0] * (len(ICUE_EQ_FREQUENCIES) - len(values)))
+            return [max(VIRTUOSO_EQ_MIN, min(VIRTUOSO_EQ_MAX, int(value))) for value in values[: len(ICUE_EQ_FREQUENCIES)]]
 
         def _virtuoso_accent_zone(self, profile: Profile) -> LightingZone:
             zone = next((item for item in profile.lighting if item.name == "accent_ring"), None)

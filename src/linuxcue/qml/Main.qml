@@ -1512,7 +1512,7 @@ ApplicationWindow {
                                 }
                                 Item { Layout.fillHeight: true }
                                 Text {
-                                    text: virtuosoSection === "eq" ? "EasyEffects / PipeWire  >" : "Beleuchtungsbibliothek  >"
+                                    text: virtuosoSection === "eq" ? "Native PipeWire EQ  >" : "Beleuchtungsbibliothek  >"
                                     color: "#8f9da3"
                                     font.pixelSize: 12
                                 }
@@ -1556,7 +1556,7 @@ ApplicationWindow {
                                 anchors.top: parent.top
                                 anchors.leftMargin: 26
                                 anchors.topMargin: 52
-                                text: virtuosoSection === "eq" ? "10 Band Equalizer wird ueber EasyEffects gesteuert" : "Beleuchtung: Logo/Accent-Ring als gespeicherte Profilfarbe"
+                                text: virtuosoSection === "eq" ? "15 Band Equalizer mit Live-PipeWire-Regelung" : "Beleuchtung: Logo/Accent-Ring als gespeicherte Profilfarbe"
                                 color: "#91aeb2"
                                 font.pixelSize: 13
                             }
@@ -1705,7 +1705,7 @@ ApplicationWindow {
                                     RowLayout {
                                         Layout.fillWidth: true
                                         Layout.fillHeight: true
-                                        spacing: 22
+                                        spacing: 14
                                         Repeater {
                                             model: linuxcue.virtuosoEqBands
                                             delegate: ColumnLayout {
@@ -1728,10 +1728,10 @@ ApplicationWindow {
                                                 Slider {
                                                     id: eqSlider
                                                     Layout.fillHeight: true
-                                                    Layout.preferredWidth: 28
+                                                    Layout.preferredWidth: 24
                                                     orientation: Qt.Vertical
-                                                    from: -36
-                                                    to: 36
+                                                    from: -48
+                                                    to: 48
                                                     stepSize: 1
                                                     value: modelData
                                                     onMoved: {
@@ -1746,7 +1746,7 @@ ApplicationWindow {
                                                 }
                                                 Text {
                                                     Layout.alignment: Qt.AlignHCenter
-                                                    text: ["31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"][index]
+                                                    text: linuxcue.virtuosoEqBandLabels[index]
                                                     color: "#9fb6bb"
                                                     font.pixelSize: 12
                                                 }
@@ -1805,6 +1805,7 @@ ApplicationWindow {
                                         onToggled: linuxcue.setVirtuosoControls(Math.round(sidetoneSlider.value), Math.round(micSlider.value), sleepBox.model[sleepBox.currentIndex], checked, autoLiveWrite)
                                     }
                                     Button { Layout.fillWidth: true; text: "Flat EQ"; onClicked: linuxcue.applyVirtuosoFlatEq() }
+                                    Button { Layout.fillWidth: true; text: "Loudness"; highlighted: true; onClicked: linuxcue.applyVirtuosoLoudnessEq() }
                                     Button { Layout.fillWidth: true; text: "Apply Linux EQ"; highlighted: true; onClicked: linuxcue.applyVirtuosoLinuxEq() }
                                     Button { Layout.fillWidth: true; text: "Native PipeWire EQ aktivieren"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
                                     Button { Layout.fillWidth: true; text: "Live EQ stoppen"; onClicked: linuxcue.stopVirtuosoLiveEq() }
@@ -1817,7 +1818,7 @@ ApplicationWindow {
                                         Text {
                                             anchors.fill: parent
                                             anchors.margins: 12
-                                            text: "Native PipeWire EQ nutzt PipeWires param_eq. Nach einmaliger Aktivierung sollen Slider live per pw-cli aktualisieren."
+                                            text: "Native PipeWire EQ nutzt eine kontrollierbare Biquad-Kette. Nach einmaliger Aktivierung werden Slider live an PipeWire uebertragen."
                                             color: "#d7edf0"
                                             wrapMode: Text.WordWrap
                                             font.pixelSize: 12

@@ -182,8 +182,8 @@ def _try_live_update_payloads(node_id: str, control_params: list[object], graph:
 
 def _bands(preset: AudioPreset) -> list[float]:
     if preset.bands:
-        values = [float(value) for value in preset.bands[:10]]
-        values.extend([0.0] * (10 - len(values)))
+        values = [float(value) for value in preset.bands[: len(ICUE_EQ_FREQUENCIES)]]
+        values.extend([0.0] * (len(ICUE_EQ_FREQUENCIES) - len(values)))
         return values
     values = [
         preset.bass,
@@ -197,7 +197,8 @@ def _bands(preset: AudioPreset) -> list[float]:
         preset.treble,
         preset.treble,
     ]
-    return [float(value) for value in values]
+    values.extend([0] * (len(ICUE_EQ_FREQUENCIES) - len(values)))
+    return [float(value) for value in values[: len(ICUE_EQ_FREQUENCIES)]]
 
 
 def _extract_quoted_property(block: str, key: str) -> str:

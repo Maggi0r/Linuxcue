@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .models import AudioPreset, Profile
 
-ICUE_EQ_FREQUENCIES = [31.0, 62.0, 125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0]
+ICUE_EQ_FREQUENCIES = [31.0, 45.0, 63.0, 90.0, 125.0, 180.0, 250.0, 355.0, 500.0, 710.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0]
 
 
 def export_virtuoso_easyeffects_presets(profile: Profile, root: Path | None = None) -> list[Path]:
@@ -40,7 +40,7 @@ def _preset_payload(preset: AudioPreset) -> dict[str, object]:
         "left": left,
         "right": left,
         "mode": "IIR",
-        "num-bands": 10,
+        "num-bands": len(ICUE_EQ_FREQUENCIES),
         "output-gain": 0.0,
         "pitch-left": 0.0,
         "pitch-right": 0.0,
@@ -74,10 +74,10 @@ def _equalizer_bands(values: list[int]) -> dict[str, dict[str, object]]:
 
 def _bands(preset: AudioPreset) -> list[int]:
     if preset.bands:
-        values = list(preset.bands[:10])
-        values.extend([0] * (10 - len(values)))
+        values = list(preset.bands[: len(ICUE_EQ_FREQUENCIES)])
+        values.extend([0] * (len(ICUE_EQ_FREQUENCIES) - len(values)))
         return values
-    return [
+    values = [
         preset.bass,
         preset.bass,
         round((preset.bass + preset.mids) / 2),
@@ -89,6 +89,8 @@ def _bands(preset: AudioPreset) -> list[int]:
         preset.treble,
         preset.treble,
     ]
+    values.extend([0] * (len(ICUE_EQ_FREQUENCIES) - len(values)))
+    return values[: len(ICUE_EQ_FREQUENCIES)]
 
 
 def _safe_name(value: str) -> str:
