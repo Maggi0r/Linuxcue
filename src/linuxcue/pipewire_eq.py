@@ -73,6 +73,21 @@ def set_default_virtuoso_eq_sink(timeout: int = 4) -> dict[str, object]:
     }
 
 
+def set_virtuoso_eq_volume(percent: int, timeout: int = 4) -> dict[str, object]:
+    clamped = max(0, min(150, int(percent)))
+    command = ["pactl", "set-sink-volume", PIPEWIRE_EQ_SINK_NAME, f"{clamped}%"]
+    result = subprocess.run(command, check=False, capture_output=True, text=True, timeout=timeout)
+    return {
+        "command": command,
+        "returncode": result.returncode,
+        "stdout": result.stdout.strip(),
+        "stderr": result.stderr.strip(),
+        "sink": PIPEWIRE_EQ_SINK_NAME,
+        "volume": clamped,
+        "ok": result.returncode == 0,
+    }
+
+
 def _available_user_units(timeout: int = 8) -> set[str]:
     command = ["systemctl", "--user", "list-unit-files", "--type=service", "--type=socket", "--no-legend"]
     result = subprocess.run(command, check=False, capture_output=True, text=True, timeout=timeout)

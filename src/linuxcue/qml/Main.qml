@@ -1501,7 +1501,16 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: 30
                                     text: "+"
-                                    visible: virtuosoSection === "lighting"
+                                    visible: virtuosoSection === "lighting" || virtuosoSection === "eq"
+                                    onClicked: {
+                                        if (virtuosoSection === "eq") {
+                                            contextVirtuosoPresetName = activeVirtuosoPresetName()
+                                            contextVirtuosoPresetProtected = false
+                                            virtuosoPresetDialogMode = "create"
+                                            virtuosoPresetNameField.text = "Eigenes Preset"
+                                            virtuosoPresetDialog.open()
+                                        }
+                                    }
                                     background: Rectangle { radius: 5; color: "#f2eb00" }
                                     contentItem: Text {
                                         text: parent.text
@@ -1554,12 +1563,34 @@ ApplicationWindow {
                                         }
                                         MouseArea {
                                             anchors.fill: parent
+                                            acceptedButtons: Qt.LeftButton | Qt.RightButton
                                             cursorShape: Qt.PointingHandCursor
-                                            onClicked: linuxcue.selectVirtuosoPreset(modelData.name, autoLiveWrite)
+                                            onClicked: function(mouse) {
+                                                contextVirtuosoPresetName = modelData.name
+                                                contextVirtuosoPresetProtected = Boolean(modelData["protected"])
+                                                if (mouse.button === Qt.RightButton)
+                                                    virtuosoPresetMenu.popup()
+                                                else
+                                                    linuxcue.selectVirtuosoPreset(modelData.name, autoLiveWrite)
+                                            }
                                         }
                                     }
                                 }
-                                Item { Layout.fillHeight: true }
+                                Item {
+                                    Layout.fillHeight: true
+                                    Layout.fillWidth: true
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        acceptedButtons: Qt.RightButton
+                                        onClicked: function(mouse) {
+                                            if (virtuosoSection === "eq" && mouse.button === Qt.RightButton) {
+                                                contextVirtuosoPresetName = activeVirtuosoPresetName()
+                                                contextVirtuosoPresetProtected = linuxcue.virtuosoPresets.length > 0 ? Boolean(linuxcue.virtuosoPresets[activeVirtuosoPresetIndex()]["protected"]) : false
+                                                virtuosoPresetMenu.popup()
+                                            }
+                                        }
+                                    }
+                                }
                                 Text {
                                     text: virtuosoSection === "eq" ? "Native PipeWire EQ  >" : "Beleuchtungsbibliothek  >"
                                     color: "#8f9da3"
@@ -1735,48 +1766,6 @@ ApplicationWindow {
                                     anchors.margins: 18
                                     anchors.topMargin: 54
                                     spacing: 12
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "EQ Preset"; color: "white"; font.bold: true; font.pixelSize: 14 }
-                                        Item { Layout.fillWidth: true }
-                                        ComboBox {
-                                            id: virtuosoPresetBox
-                                            Layout.preferredWidth: 220
-                                            textRole: "name"
-                                            model: linuxcue.virtuosoPresets
-                                            currentIndex: activeVirtuosoPresetIndex()
-                                            onActivated: function(index) {
-                                                if (linuxcue.virtuosoPresets.length > index)
-                                                    linuxcue.selectVirtuosoPreset(linuxcue.virtuosoPresets[index].name, autoLiveWrite)
-                                            }
-                                        }
-                                        Button {
-                                            text: "+"
-                                            Layout.preferredWidth: 42
-                                            onClicked: {
-                                                virtuosoPresetDialogMode = "create"
-                                                virtuosoPresetNameField.text = "Eigenes Preset"
-                                                virtuosoPresetDialog.open()
-                                            }
-                                        }
-                                        Button {
-                                            text: "Kopie"
-                                            Layout.preferredWidth: 72
-                                            enabled: linuxcue.virtuosoPresets.length > 0
-                                            onClicked: {
-                                                contextVirtuosoPresetName = activeVirtuosoPresetName()
-                                                virtuosoPresetDialogMode = "copy"
-                                                virtuosoPresetNameField.text = contextVirtuosoPresetName + " Kopie"
-                                                virtuosoPresetDialog.open()
-                                            }
-                                        }
-                                        Button {
-                                            text: "Loeschen"
-                                            Layout.preferredWidth: 86
-                                            enabled: linuxcue.virtuosoPresets.length > 0 && !linuxcue.virtuosoPresets[activeVirtuosoPresetIndex()]["protected"]
-                                            onClicked: linuxcue.deleteVirtuosoPreset(activeVirtuosoPresetName())
-                                        }
-                                    }
                                     GridLayout {
                                         Layout.fillWidth: true
                                         Layout.fillHeight: true
@@ -1868,6 +1857,33 @@ ApplicationWindow {
                                                 linuxcue.setVirtuosoControls(Math.round(sidetoneSlider.value), Math.round(value), sleepBox.model[sleepBox.currentIndex], voiceSwitch.checked, autoLiveWrite)
                                         }
                                     }
+                                    Text {
+                                        text: "Ausgabe-Lautstaerke  " + Math.round(volumeSlider.value) + "%"
+                                        color: "white"
+                                        font.bold: true
+                                        font.pixelSize: 13
+                                    }
+                                    Timer {
+                                        id: volumeSliderLiveTimer
+                                        interval: 160
+                                        repeat: false
+                                        onTriggered: linuxcue.setVirtuosoVolume(Math.round(volumeSlider.value), autoLiveWrite)
+                                    }
+                                    Slider {
+                                        id: volumeSlider
+                                        Layout.fillWidth: true
+                                        from: 0
+                                        to: 150
+                                        stepSize: 1
+                                        value: linuxcue.virtuosoVolume
+                                        onMoved: volumeSliderLiveTimer.restart()
+                                        onPressedChanged: {
+                                            if (!pressed) {
+                                                volumeSliderLiveTimer.stop()
+                                                linuxcue.setVirtuosoVolume(Math.round(value), autoLiveWrite)
+                                            }
+                                        }
+                                    }
                                     Text { text: "Sleep Timer"; color: "white"; font.bold: true; font.pixelSize: 13 }
                                     ComboBox {
                                         id: sleepBox
@@ -1883,8 +1899,8 @@ ApplicationWindow {
                                         checked: linuxcue.virtuosoVoicePrompts
                                         onToggled: linuxcue.setVirtuosoControls(Math.round(sidetoneSlider.value), Math.round(micSlider.value), sleepBox.model[sleepBox.currentIndex], checked, autoLiveWrite)
                                     }
-                                    Button { Layout.fillWidth: true; text: "Apply Linux EQ"; highlighted: true; onClicked: linuxcue.applyVirtuosoLinuxEq() }
-                                    Button { Layout.fillWidth: true; text: "Native PipeWire EQ aktivieren"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
+                                    Button { Layout.fillWidth: true; text: "EQ erneut anwenden"; highlighted: true; onClicked: linuxcue.applyVirtuosoLinuxEq() }
+                                    Button { Layout.fillWidth: true; text: "PipeWire EQ neu starten"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
                                     Button { Layout.fillWidth: true; text: "Live EQ stoppen"; onClicked: linuxcue.stopVirtuosoLiveEq() }
                                     Rectangle {
                                         Layout.fillWidth: true

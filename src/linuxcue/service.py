@@ -31,7 +31,7 @@ from .virtuoso_backend import (
 )
 from .known_devices import TARGET_DEVICES, known_device_by_slug, mock_probe_for_slug, support_for_product
 from .models import Device, ProbeData, Profile
-from .pipewire_eq import set_default_virtuoso_eq_sink, restart_pipewire_user_services, write_virtuoso_pipewire_eq
+from .pipewire_eq import set_default_virtuoso_eq_sink, restart_pipewire_user_services, set_virtuoso_eq_volume, write_virtuoso_pipewire_eq
 from .pipewire_native_eq import apply_virtuoso_native_pipewire_eq, pipewire_native_eq_doctor
 from .profile_store import ProfileStore
 from .probe_store import ProbeStore
@@ -751,6 +751,13 @@ class LinuxCueService:
 
     def pipewire_native_eq_doctor(self) -> dict[str, object]:
         return pipewire_native_eq_doctor()
+
+    def set_virtuoso_eq_volume(self, percent: int) -> dict[str, object]:
+        if not sys.platform.startswith("linux"):
+            raise RuntimeError("Virtuoso PipeWire volume is only supported on Linux/PipeWire.")
+        if shutil.which("pactl") is None:
+            raise RuntimeError("pactl was not found. Install PulseAudio/PipeWire Pulse tools first.")
+        return set_virtuoso_eq_volume(percent)
 
     def update_virtuoso_live_eq(self, name: str, preset_name: str | None = None) -> dict[str, object]:
         profile = self.load_profile(name)

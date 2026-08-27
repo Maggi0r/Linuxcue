@@ -51,7 +51,15 @@ VIRTUOSO_SYSTEM_PRESETS = {
     "loudness": VIRTUOSO_LOUDNESS_BANDS,
     "bass boost": [4, 5, 6, 5, 4, 2, 0, -1, -3, -3, -3, -2, 1, 2, 2],
 }
-VIRTUOSO_PROTECTED_PRESETS = set(VIRTUOSO_SYSTEM_PRESETS) | {"fps", "music", "voice"}
+VIRTUOSO_PROTECTED_PRESETS = set(VIRTUOSO_SYSTEM_PRESETS) | {
+    "clear chat",
+    "fps",
+    "fps competition",
+    "movie theater",
+    "music",
+    "pure direct",
+    "voice",
+}
 
 
 def _device_slug(target: str, family: str) -> str:
@@ -107,9 +115,10 @@ if QT_QML_IMPORT_ERROR is None:
             self._virtuoso_accent_color = "#1ecfdf"
             self._virtuoso_sidetone = 35
             self._virtuoso_mic_level = 72
+            self._virtuoso_volume = 100
             self._virtuoso_sleep_timer = 20
             self._virtuoso_voice_prompts = True
-            self._virtuoso_eq_backend = "profile"
+            self._virtuoso_eq_backend = "pipewire"
             self._m65_lighting_zones: list[dict[str, Any]] = []
             self._m65_dpi_presets: list[dict[str, Any]] = []
             self._m65_dpi_stages: list[dict[str, Any]] = []
@@ -167,6 +176,10 @@ if QT_QML_IMPORT_ERROR is None:
         @Property(int, notify=dataChanged)
         def virtuosoMicLevel(self) -> int:
             return self._virtuoso_mic_level
+
+        @Property(int, notify=dataChanged)
+        def virtuosoVolume(self) -> int:
+            return self._virtuoso_volume
 
         @Property(int, notify=dataChanged)
         def virtuosoSleepTimer(self) -> int:
@@ -470,51 +483,69 @@ if QT_QML_IMPORT_ERROR is None:
                 self._status = "Update nicht moeglich: bash wurde nicht gefunden."
                 self.dataChanged.emit()
                 return
-            command = (
-                ": >/tmp/linuxcue-restart.log; : >/tmp/linuxcue-gui-restart.log; "
-                "echo \"Update terminal started $(date)\" >>/tmp/linuxcue-restart.log; "
-                "linuxcue install-update --yes; "
-                "status=$?; echo; "
-                "if [ $status -eq 0 ]; then echo 'linuxcue Update abgeschlossen. Starte linuxcue neu...'; "
-                "cat >/tmp/linuxcue-restart.sh <<'LINUXCUE_RESTART'\n"
-                "#!/usr/bin/env bash\n"
-                "sleep 3\n"
-                "exec >/tmp/linuxcue-restart.log 2>&1\n"
-                "echo \"Restart $(date)\"\n"
-                "start_linuxcue_gui() {\n"
-                "  echo \"Trying $*\"\n"
-                "  nohup \"$@\" >/tmp/linuxcue-gui-restart.log 2>&1 &\n"
-                "  pid=$!\n"
-                "  echo \"Started pid $pid\"\n"
-                "  sleep 1\n"
-                "  if kill -0 \"$pid\" >/dev/null 2>&1; then\n"
-                "    echo \"linuxcue GUI is running\"\n"
-                "    exit 0\n"
-                "  fi\n"
-                "  echo \"Launcher exited early, see /tmp/linuxcue-gui-restart.log\"\n"
-                "}\n"
-                "for launcher in \"$(command -v linuxcue || true)\" /usr/bin/linuxcue /usr/local/bin/linuxcue; do\n"
-                "  [ -x \"$launcher\" ] || continue\n"
-                "  start_linuxcue_gui \"$launcher\" qml-gui\n"
-                "done\n"
-                "for launcher in \"$(command -v linuxcue-qml-gui || true)\" \"$(command -v linuxcue-gui || true)\" /usr/bin/linuxcue-qml-gui /usr/bin/linuxcue-gui; do\n"
-                "  [ -x \"$launcher\" ] || continue\n"
-                "  start_linuxcue_gui \"$launcher\"\n"
-                "done\n"
-                "echo \"No linuxcue launcher could be started\"\n"
-                "LINUXCUE_RESTART\n"
-                "chmod +x /tmp/linuxcue-restart.sh; "
-                "if command -v setsid >/dev/null 2>&1; then setsid /tmp/linuxcue-restart.sh >/dev/null 2>&1 & "
-                "else nohup /tmp/linuxcue-restart.sh >/dev/null 2>&1 & fi; "
-                "exit 0; "
-                "else echo 'linuxcue Update fehlgeschlagen.'; "
-                "read -r -p 'Enter zum Schliessen...'; exit $status; fi"
+            script_path = Path("/tmp/linuxcue-update-and-restart.sh")
+            script_path.write_text(
+                """#!/usr/bin/env bash
+set +e
+restart_log=/tmp/linuxcue-restart.log
+gui_log=/tmp/linuxcue-gui-restart.log
+: > "$restart_log"
+: > "$gui_log"
+exec >>"$restart_log" 2>&1
+echo "Update terminal started $(date)"
+linuxcue install-update --yes
+status=$?
+echo
+if [ $status -ne 0 ]; then
+  echo "linuxcue Update fehlgeschlagen."
+  read -r -p "Enter zum Schliessen..."
+  exit $status
+fi
+echo "linuxcue Update abgeschlossen. Starte linuxcue neu..."
+cat >/tmp/linuxcue-restart-gui.sh <<'LINUXCUE_RESTART'
+#!/usr/bin/env bash
+restart_log=/tmp/linuxcue-restart.log
+gui_log=/tmp/linuxcue-gui-restart.log
+exec >>"$restart_log" 2>&1
+echo "Restart $(date)"
+start_linuxcue_gui() {
+  echo "Trying $*"
+  nohup "$@" >>"$gui_log" 2>&1 &
+  pid=$!
+  echo "Started pid $pid"
+  sleep 1
+  if kill -0 "$pid" >/dev/null 2>&1; then
+    echo "linuxcue GUI is running"
+    exit 0
+  fi
+  echo "Launcher exited early, see $gui_log"
+}
+for launcher in "$(command -v linuxcue || true)" /usr/bin/linuxcue /usr/local/bin/linuxcue; do
+  [ -x "$launcher" ] || continue
+  start_linuxcue_gui "$launcher" qml-gui
+done
+for launcher in "$(command -v linuxcue-qml-gui || true)" "$(command -v linuxcue-gui || true)" /usr/bin/linuxcue-qml-gui /usr/bin/linuxcue-gui; do
+  [ -x "$launcher" ] || continue
+  start_linuxcue_gui "$launcher"
+done
+echo "No linuxcue launcher could be started"
+LINUXCUE_RESTART
+chmod +x /tmp/linuxcue-restart-gui.sh
+if command -v setsid >/dev/null 2>&1; then
+  setsid /tmp/linuxcue-restart-gui.sh >/dev/null 2>&1 &
+else
+  nohup /tmp/linuxcue-restart-gui.sh >/dev/null 2>&1 &
+fi
+exit 0
+""",
+                encoding="utf-8",
             )
+            script_path.chmod(0o755)
             terminals = [
-                ["konsole", "-e", "bash", "-lc", command],
-                ["gnome-terminal", "--", "bash", "-lc", command],
-                ["xfce4-terminal", "-e", f"bash -lc {command!r}"],
-                ["xterm", "-e", "bash", "-lc", command],
+                ["konsole", "-e", "bash", str(script_path)],
+                ["gnome-terminal", "--", "bash", str(script_path)],
+                ["xfce4-terminal", "-e", f"bash {script_path}"],
+                ["xterm", "-e", "bash", str(script_path)],
             ]
             for args in terminals:
                 if shutil.which(args[0]):
@@ -1052,6 +1083,30 @@ if QT_QML_IMPORT_ERROR is None:
                     self._status = f"Virtuoso Control gespeichert, Live Write fehlgeschlagen: {exc}"
             self.dataChanged.emit()
 
+        @Slot(int, bool)
+        def setVirtuosoVolume(self, volume: int, live: bool = True) -> None:
+            profile = self._active_profile_for_target("virtuoso-se")
+            if profile is None:
+                self._status = "Kein Virtuoso-Profil aktiv."
+                self.dataChanged.emit()
+                return
+            self._ensure_virtuoso_defaults(profile)
+            clamped = max(0, min(150, int(volume)))
+            profile.options["virtuoso_volume"] = clamped
+            self.service.save_profile(profile)
+            self._virtuoso_volume = clamped
+            self._status = f"Virtuoso Lautstaerke gespeichert: {clamped}%"
+            if live:
+                try:
+                    result = self.service.set_virtuoso_eq_volume(clamped)
+                    if result.get("ok"):
+                        self._status = f"Virtuoso Lautstaerke aktiv: {clamped}%"
+                    else:
+                        self._status = f"Virtuoso Lautstaerke gespeichert, PipeWire abgelehnt: {result.get('stderr', '')}"
+                except Exception as exc:
+                    self._status = f"Virtuoso Lautstaerke gespeichert, Live-Set fehlgeschlagen: {exc}"
+            self.dataChanged.emit()
+
         @Slot()
         def applyVirtuosoFlatEq(self) -> None:
             profile = self._active_profile_for_target("virtuoso-se")
@@ -1181,6 +1236,7 @@ if QT_QML_IMPORT_ERROR is None:
             self.service.save_profile(profile)
             try:
                 result = self.service.apply_virtuoso_pipewire_eq(profile.name)
+                self.service.set_virtuoso_eq_volume(int(profile.options.get("virtuoso_volume") or 100))
                 self._status = f"Native PipeWire EQ aktiviert: {result.get('preset', 'Preset')}"
             except Exception as exc:
                 self._status = f"Native PipeWire EQ Aktivierung fehlgeschlagen: {exc}"
@@ -1352,6 +1408,7 @@ if QT_QML_IMPORT_ERROR is None:
                 self._virtuoso_accent_color = "#1ecfdf"
                 self._virtuoso_sidetone = 35
                 self._virtuoso_mic_level = 72
+                self._virtuoso_volume = 100
                 self._virtuoso_sleep_timer = 20
                 self._virtuoso_voice_prompts = True
                 return
@@ -1365,6 +1422,7 @@ if QT_QML_IMPORT_ERROR is None:
             self._virtuoso_accent_color = self._virtuoso_accent_zone(profile).color
             self._virtuoso_sidetone = profile.headset.sidetone
             self._virtuoso_mic_level = profile.headset.mic_level
+            self._virtuoso_volume = int(profile.options.get("virtuoso_volume") or 100)
             self._virtuoso_sleep_timer = profile.headset.sleep_timer_minutes
             self._virtuoso_voice_prompts = profile.headset.voice_prompt_enabled
 
@@ -1387,7 +1445,8 @@ if QT_QML_IMPORT_ERROR is None:
                 profile.audio[0].active = True
             if profile.headset is None:
                 profile.headset = HeadsetSetting()
-            profile.options.setdefault("virtuoso_eq_backend", "profile")
+            profile.options.setdefault("virtuoso_eq_backend", "pipewire")
+            profile.options.setdefault("virtuoso_volume", 100)
             self._virtuoso_accent_zone(profile)
 
         def _active_virtuoso_preset(self, profile: Profile) -> AudioPreset:
@@ -1451,7 +1510,11 @@ if QT_QML_IMPORT_ERROR is None:
                     if result.get("ok"):
                         self.statusReady.emit(f"Native PipeWire EQ live aktualisiert: {result.get('node', {}).get('node_name', 'EQ')}")
                     elif result.get("needs_activation"):
-                        self.statusReady.emit("Native PipeWire EQ gespeichert. Bitte einmal Native PipeWire EQ aktivieren.")
+                        activation = self.service.apply_virtuoso_pipewire_eq(profile_name)
+                        profile = self.service.load_profile(profile_name)
+                        volume = int(profile.options.get("virtuoso_volume") or 100) if profile is not None else 100
+                        self.service.set_virtuoso_eq_volume(volume)
+                        self.statusReady.emit(f"Native PipeWire EQ automatisch aktiviert: {activation.get('preset', 'Preset')}")
                     else:
                         attempts = result.get("attempts") or []
                         last = attempts[-1] if attempts else {}
@@ -1483,7 +1546,7 @@ if QT_QML_IMPORT_ERROR is None:
                 return "easyeffects"
             if backend == "pipewire":
                 return "pipewire"
-            return "profile"
+            return "pipewire"
 
         def _refresh_m65_state(self) -> None:
             profile = self._active_profile_for_target("m65")
