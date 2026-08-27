@@ -549,10 +549,10 @@ exit 0
             ]
             for args in terminals:
                 if shutil.which(args[0]):
-                    subprocess.Popen(args)
+                    subprocess.Popen(args, start_new_session=True)
                     self._status = "Update-Installation im Terminal gestartet."
                     self.dataChanged.emit()
-                    QTimer.singleShot(1200, QGuiApplication.instance().quit)
+                    QTimer.singleShot(5000, QGuiApplication.instance().quit)
                     return
             self._status = "Kein Terminal gefunden. Bitte ausfuehren: linuxcue install-update --yes"
             self.dataChanged.emit()
