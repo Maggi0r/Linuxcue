@@ -1491,6 +1491,7 @@ ApplicationWindow {
                         Panel {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
+                            visible: virtuosoSection !== "nvidia"
                             title: virtuosoSection === "eq" ? "Audio Presets" : "Beleuchtungsschichten"
                             ColumnLayout {
                                 anchors.fill: parent
@@ -1924,18 +1925,122 @@ ApplicationWindow {
                         Rectangle {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            radius: 16
+                            radius: 18
                             color: "#0d1113"
                             border.color: "#24363d"
                             visible: virtuosoSection === "nvidia"
-                            Text {
-                                anchors.centerIn: parent
-                                width: parent.width - 80
-                                text: "NVIDIA-/Broadcast-Integration ist als Platzhalter angelegt. Sobald wir echte Einstellungen anbinden, landet sie hier getrennt vom Equalizer."
-                                color: "#9fb6bb"
-                                horizontalAlignment: Text.AlignHCenter
-                                wrapMode: Text.WordWrap
-                                font.pixelSize: 16
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.margins: 1
+                                radius: 17
+                                gradient: Gradient {
+                                    GradientStop { position: 0.0; color: "#172124" }
+                                    GradientStop { position: 0.62; color: "#0b1215" }
+                                    GradientStop { position: 1.0; color: "#071013" }
+                                }
+                            }
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 26
+                                spacing: 18
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 16
+                                    Rectangle {
+                                        Layout.preferredWidth: 74
+                                        Layout.preferredHeight: 74
+                                        radius: 20
+                                        gradient: Gradient {
+                                            GradientStop { position: 0.0; color: "#8cff1a" }
+                                            GradientStop { position: 0.55; color: "#20d74f" }
+                                            GradientStop { position: 1.0; color: "#0b6f4f" }
+                                        }
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "NV"
+                                            color: "#06100a"
+                                            font.bold: true
+                                            font.pixelSize: 24
+                                        }
+                                    }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 5
+                                        Text {
+                                            text: "NVIDIA Broadcast fuer Linux"
+                                            color: "white"
+                                            font.bold: true
+                                            font.pixelSize: 28
+                                        }
+                                        Text {
+                                            text: "Optionale Integration ueber das externe Projekt nvidia-broadcast-linux"
+                                            color: "#9fb6bb"
+                                            font.pixelSize: 14
+                                        }
+                                    }
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: "NVBroadcast stellt KI-gestuetzte Kamera- und Mikrofonfunktionen fuer Meetings und Streams bereit: Hintergrund entfernen oder weichzeichnen, virtuelle Kamera, Bildverbesserung und Rauschunterdrueckung. linuxcue startet hier nur den offiziellen Installer, damit die Abhaengigkeiten und Kernelmodule korrekt vom Projekt eingerichtet werden."
+                                    color: "#d7edf0"
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: 15
+                                    lineHeight: 1.15
+                                }
+                                GridLayout {
+                                    Layout.fillWidth: true
+                                    columns: 2
+                                    columnSpacing: 14
+                                    rowSpacing: 12
+                                    InfoCard {
+                                        title: "Quelle"
+                                        value: "github.com/Hkshoonya/nvidia-broadcast-linux"
+                                    }
+                                    InfoCard {
+                                        title: "Installation"
+                                        value: "Klonen oder aktualisieren, danach ./install.sh"
+                                    }
+                                    InfoCard {
+                                        title: "Typische Voraussetzungen"
+                                        value: "NVIDIA-GPU, PipeWire, GStreamer, GTK4, v4l2loopback/DKMS"
+                                    }
+                                    InfoCard {
+                                        title: "Ausgabe"
+                                        value: "Virtuelle Kamera und optionale Mikrofon-/Noise-Filter"
+                                    }
+                                }
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 12
+                                    Button {
+                                        Layout.preferredWidth: 220
+                                        text: "NVBroadcast installieren"
+                                        highlighted: true
+                                        onClicked: linuxcue.installNvidiaBroadcast()
+                                    }
+                                    Button {
+                                        Layout.preferredWidth: 180
+                                        text: "GitHub oeffnen"
+                                        onClicked: Qt.openUrlExternally("https://github.com/Hkshoonya/nvidia-broadcast-linux")
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                }
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 78
+                                    radius: 12
+                                    color: "#081712"
+                                    border.color: "#214b3a"
+                                    Text {
+                                        anchors.fill: parent
+                                        anchors.margins: 14
+                                        text: "Hinweis: Der Installer kann sudo, DKMS und Kernel-Header brauchen. Das Terminal bleibt offen, damit Fehlermeldungen sichtbar bleiben. Log: /tmp/linuxcue-nvbroadcast-install.log"
+                                        color: "#bfe9d0"
+                                        wrapMode: Text.WordWrap
+                                        font.pixelSize: 13
+                                    }
+                                }
+                                Item { Layout.fillHeight: true }
                             }
                         }
                     }
@@ -2067,6 +2172,34 @@ ApplicationWindow {
                     return
                 window.width = Math.max(window.minimumWidth, resizeStartWidth + mouse.screenX - resizeStartX)
                 window.height = Math.max(window.minimumHeight, resizeStartHeight + mouse.screenY - resizeStartY)
+            }
+        }
+    }
+
+    component InfoCard: Rectangle {
+        property string title: ""
+        property string value: ""
+        Layout.fillWidth: true
+        Layout.preferredHeight: 82
+        radius: 12
+        color: "#101b1d"
+        border.color: "#263b42"
+        Column {
+            anchors.fill: parent
+            anchors.margins: 12
+            spacing: 5
+            Text {
+                text: title
+                color: "#d7ff28"
+                font.bold: true
+                font.pixelSize: 12
+            }
+            Text {
+                width: parent.width
+                text: value
+                color: "#d7edf0"
+                wrapMode: Text.WordWrap
+                font.pixelSize: 13
             }
         }
     }

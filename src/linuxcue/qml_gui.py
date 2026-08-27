@@ -502,40 +502,17 @@ if [ $status -ne 0 ]; then
   exit $status
 fi
 echo "linuxcue Update abgeschlossen. Starte linuxcue neu..."
-cat >/tmp/linuxcue-restart-gui.sh <<'LINUXCUE_RESTART'
-#!/usr/bin/env bash
-restart_log=/tmp/linuxcue-restart.log
-gui_log=/tmp/linuxcue-gui-restart.log
-exec >>"$restart_log" 2>&1
-echo "Restart $(date)"
-start_linuxcue_gui() {
-  echo "Trying $*"
-  nohup "$@" >>"$gui_log" 2>&1 &
-  pid=$!
-  echo "Started pid $pid"
-  sleep 1
-  if kill -0 "$pid" >/dev/null 2>&1; then
-    echo "linuxcue GUI is running"
-    exit 0
-  fi
-  echo "Launcher exited early, see $gui_log"
-}
-for launcher in "$(command -v linuxcue || true)" /usr/bin/linuxcue /usr/local/bin/linuxcue; do
-  [ -x "$launcher" ] || continue
-  start_linuxcue_gui "$launcher" qml-gui
-done
-for launcher in "$(command -v linuxcue-qml-gui || true)" "$(command -v linuxcue-gui || true)" /usr/bin/linuxcue-qml-gui /usr/bin/linuxcue-gui; do
-  [ -x "$launcher" ] || continue
-  start_linuxcue_gui "$launcher"
-done
-echo "No linuxcue launcher could be started"
-LINUXCUE_RESTART
-chmod +x /tmp/linuxcue-restart-gui.sh
-if command -v setsid >/dev/null 2>&1; then
-  setsid /tmp/linuxcue-restart-gui.sh >/dev/null 2>&1 &
-else
-  nohup /tmp/linuxcue-restart-gui.sh >/dev/null 2>&1 &
+launcher="$(command -v linuxcue || true)"
+if [ -z "$launcher" ]; then
+  launcher=/usr/bin/linuxcue
 fi
+echo "Restart launcher: $launcher"
+if command -v setsid >/dev/null 2>&1; then
+  setsid bash -c 'sleep 2; echo "GUI start $(date)" >>/tmp/linuxcue-gui-restart.log; exec "$1" qml-gui >>/tmp/linuxcue-gui-restart.log 2>&1 < /dev/null' _ "$launcher" >/dev/null 2>&1 &
+else
+  nohup bash -c 'sleep 2; echo "GUI start $(date)" >>/tmp/linuxcue-gui-restart.log; exec "$1" qml-gui >>/tmp/linuxcue-gui-restart.log 2>&1 < /dev/null' _ "$launcher" >/dev/null 2>&1 &
+fi
+echo "Restart command dispatched"
 exit 0
 """,
                 encoding="utf-8",
@@ -555,6 +532,63 @@ exit 0
                     QTimer.singleShot(5000, QGuiApplication.instance().quit)
                     return
             self._status = "Kein Terminal gefunden. Bitte ausfuehren: linuxcue install-update --yes"
+            self.dataChanged.emit()
+
+        @Slot()
+        def installNvidiaBroadcast(self) -> None:
+            if not sys.platform.startswith("linux"):
+                self._status = "NVBroadcast-Installation ist nur auf Linux aktiv."
+                self.dataChanged.emit()
+                return
+            if not shutil.which("bash"):
+                self._status = "NVBroadcast-Installation nicht moeglich: bash wurde nicht gefunden."
+                self.dataChanged.emit()
+                return
+            script_path = Path("/tmp/linuxcue-install-nvbroadcast.sh")
+            script_path.write_text(
+                """#!/usr/bin/env bash
+set -e
+log=/tmp/linuxcue-nvbroadcast-install.log
+exec > >(tee "$log") 2>&1
+echo "NVBroadcast installation started $(date)"
+repo_dir="$HOME/.cache/linuxcue/nvidia-broadcast-linux"
+if ! command -v git >/dev/null 2>&1; then
+  echo "git fehlt. Bitte zuerst git installieren."
+  read -r -p "Enter zum Schliessen..."
+  exit 1
+fi
+if [ -d "$repo_dir/.git" ]; then
+  echo "Aktualisiere vorhandenes Repo..."
+  git -C "$repo_dir" pull --ff-only
+else
+  echo "Klone NVBroadcast..."
+  mkdir -p "$(dirname "$repo_dir")"
+  git clone https://github.com/Hkshoonya/nvidia-broadcast-linux.git "$repo_dir"
+fi
+cd "$repo_dir"
+echo "Starte offiziellen Installer..."
+./install.sh
+echo
+echo "NVBroadcast Installation abgeschlossen."
+echo "Log: $log"
+read -r -p "Enter zum Schliessen..."
+""",
+                encoding="utf-8",
+            )
+            script_path.chmod(0o755)
+            terminals = [
+                ["konsole", "-e", "bash", str(script_path)],
+                ["gnome-terminal", "--", "bash", str(script_path)],
+                ["xfce4-terminal", "-e", f"bash {script_path}"],
+                ["xterm", "-e", "bash", str(script_path)],
+            ]
+            for args in terminals:
+                if shutil.which(args[0]):
+                    subprocess.Popen(args, start_new_session=True)
+                    self._status = "NVBroadcast-Installation im Terminal gestartet."
+                    self.dataChanged.emit()
+                    return
+            self._status = "Kein Terminal gefunden. Bitte ausfuehren: git clone https://github.com/Hkshoonya/nvidia-broadcast-linux.git && cd nvidia-broadcast-linux && ./install.sh"
             self.dataChanged.emit()
 
         @Slot()
