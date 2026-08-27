@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .models import AudioPreset, Profile
 
+ICUE_EQ_LEGACY_FREQUENCIES = [31.0, 62.0, 125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0]
 ICUE_EQ_FREQUENCIES = [31.0, 45.0, 63.0, 90.0, 125.0, 180.0, 250.0, 355.0, 500.0, 710.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0]
 
 
@@ -74,9 +75,7 @@ def _equalizer_bands(values: list[int]) -> dict[str, dict[str, object]]:
 
 def _bands(preset: AudioPreset) -> list[int]:
     if preset.bands:
-        values = list(preset.bands[: len(ICUE_EQ_FREQUENCIES)])
-        values.extend([0] * (len(ICUE_EQ_FREQUENCIES) - len(values)))
-        return values
+        return expand_eq_bands([int(value) for value in preset.bands])
     values = [
         preset.bass,
         preset.bass,
@@ -91,6 +90,31 @@ def _bands(preset: AudioPreset) -> list[int]:
     ]
     values.extend([0] * (len(ICUE_EQ_FREQUENCIES) - len(values)))
     return values[: len(ICUE_EQ_FREQUENCIES)]
+
+
+def expand_eq_bands(values: list[int]) -> list[int]:
+    if len(values) == len(ICUE_EQ_FREQUENCIES):
+        return values[:]
+    if len(values) == len(ICUE_EQ_LEGACY_FREQUENCIES):
+        return [_interpolate_legacy_band(float(frequency), values) for frequency in ICUE_EQ_FREQUENCIES]
+    normalised = values[: len(ICUE_EQ_FREQUENCIES)]
+    normalised.extend([0] * (len(ICUE_EQ_FREQUENCIES) - len(normalised)))
+    return normalised
+
+
+def _interpolate_legacy_band(frequency: float, values: list[int]) -> int:
+    legacy = ICUE_EQ_LEGACY_FREQUENCIES
+    if frequency <= legacy[0]:
+        return int(values[0])
+    if frequency >= legacy[-1]:
+        return int(values[-1])
+    for index in range(len(legacy) - 1):
+        low = legacy[index]
+        high = legacy[index + 1]
+        if low <= frequency <= high:
+            position = (frequency - low) / (high - low)
+            return round(values[index] + (values[index + 1] - values[index]) * position)
+    return 0
 
 
 def _safe_name(value: str) -> str:

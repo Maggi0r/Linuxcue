@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from .easyeffects_export import ICUE_EQ_FREQUENCIES
+from .easyeffects_export import ICUE_EQ_FREQUENCIES, expand_eq_bands
 from .models import AudioPreset, Profile
 
 PIPEWIRE_EQ_CONFIG = Path.home() / ".config" / "pipewire" / "pipewire.conf.d" / "90-linuxcue-virtuoso-eq.conf"
@@ -139,9 +139,7 @@ context.modules = [
 
 def _bands(preset: AudioPreset) -> list[float]:
     if preset.bands:
-        values = [float(value) for value in preset.bands[: len(ICUE_EQ_FREQUENCIES)]]
-        values.extend([0.0] * (len(ICUE_EQ_FREQUENCIES) - len(values)))
-        return values
+        return [float(value) for value in expand_eq_bands([int(value) for value in preset.bands])]
     values = [
         preset.bass,
         preset.bass,

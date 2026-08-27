@@ -29,7 +29,7 @@ from .k95_backend import K95_OPENRGB_ZONE_ORDER
 from .m65_backend import M65_RGB_ZONES
 from .m65_monitor import M65DpiInputMonitor
 from .models import AudioPreset, CoolingChannel, DpiStage, HeadsetSetting, LightingZone, Profile
-from .easyeffects_export import ICUE_EQ_FREQUENCIES
+from .easyeffects_export import ICUE_EQ_FREQUENCIES, expand_eq_bands
 
 M65_DPI_ORDER = ("stage1", "stage2", "stage3", "stage4", "stage5", "sniper")
 M65_DPI_DEFAULTS: dict[str, tuple[int, str]] = {
@@ -45,6 +45,13 @@ VIRTUOSO_EQ_MIN = -48
 VIRTUOSO_EQ_MAX = 48
 VIRTUOSO_EQ_LABELS = ["31", "45", "63", "90", "125", "180", "250", "355", "500", "710", "1k", "2k", "4k", "8k", "16k"]
 VIRTUOSO_LOUDNESS_BANDS = [7, 6, 5, 4, 3, 1, 0, -1, -1, 0, 1, 3, 5, 6, 5]
+VIRTUOSO_FLAT_BANDS = [0] * len(ICUE_EQ_FREQUENCIES)
+VIRTUOSO_SYSTEM_PRESETS = {
+    "flat": VIRTUOSO_FLAT_BANDS,
+    "loudness": VIRTUOSO_LOUDNESS_BANDS,
+    "bass boost": [4, 5, 6, 5, 4, 2, 0, -1, -3, -3, -3, -2, 1, 2, 2],
+}
+VIRTUOSO_PROTECTED_PRESETS = set(VIRTUOSO_SYSTEM_PRESETS) | {"fps", "music", "voice"}
 
 
 def _device_slug(target: str, family: str) -> str:
@@ -1087,6 +1094,71 @@ if QT_QML_IMPORT_ERROR is None:
             self._apply_virtuoso_eq(profile.name)
             self.dataChanged.emit()
 
+        @Slot(str)
+        def createVirtuosoPreset(self, name: str = "") -> None:
+            profile = self._active_profile_for_target("virtuoso-se")
+            if profile is None:
+                self._status = "Kein Virtuoso-Profil aktiv."
+                self.dataChanged.emit()
+                return
+            self._ensure_virtuoso_defaults(profile)
+            preset_name = self._unique_virtuoso_preset_name(profile, name.strip() or "Eigenes Preset")
+            preset = AudioPreset(name=preset_name, active=True, bands=list(VIRTUOSO_FLAT_BANDS))
+            for item in profile.audio:
+                item.active = False
+            profile.audio.append(preset)
+            self.service.save_profile(profile)
+            self._refresh_virtuoso_state()
+            self._status = f"Virtuoso Preset erstellt: {preset_name}"
+            self._apply_virtuoso_eq(profile.name)
+            self.dataChanged.emit()
+
+        @Slot(str, str)
+        def copyVirtuosoPreset(self, source_name: str = "", new_name: str = "") -> None:
+            profile = self._active_profile_for_target("virtuoso-se")
+            if profile is None:
+                self._status = "Kein Virtuoso-Profil aktiv."
+                self.dataChanged.emit()
+                return
+            self._ensure_virtuoso_defaults(profile)
+            source = next((preset for preset in profile.audio if preset.name == source_name), self._active_virtuoso_preset(profile))
+            preset_name = self._unique_virtuoso_preset_name(profile, new_name.strip() or f"{source.name} Kopie")
+            clone = AudioPreset(name=preset_name, active=True, bands=self._virtuoso_bands(source))
+            for item in profile.audio:
+                item.active = False
+            profile.audio.append(clone)
+            self.service.save_profile(profile)
+            self._refresh_virtuoso_state()
+            self._status = f"Virtuoso Preset kopiert: {preset_name}"
+            self._apply_virtuoso_eq(profile.name)
+            self.dataChanged.emit()
+
+        @Slot(str)
+        def deleteVirtuosoPreset(self, name: str) -> None:
+            profile = self._active_profile_for_target("virtuoso-se")
+            if profile is None:
+                self._status = "Kein Virtuoso-Profil aktiv."
+                self.dataChanged.emit()
+                return
+            self._ensure_virtuoso_defaults(profile)
+            target = next((preset for preset in profile.audio if preset.name == name), None)
+            if target is None:
+                self._status = "Virtuoso Preset nicht gefunden."
+            elif self._virtuoso_preset_protected(profile, target):
+                self._status = f"Virtuoso Preset ist geschuetzt: {target.name}"
+            elif len(profile.audio) <= 1:
+                self._status = "Das letzte Virtuoso Preset kann nicht geloescht werden."
+            else:
+                was_active = target.active
+                profile.audio = [preset for preset in profile.audio if preset is not target]
+                if was_active and profile.audio:
+                    profile.audio[0].active = True
+                self.service.save_profile(profile)
+                self._refresh_virtuoso_state()
+                self._status = f"Virtuoso Preset geloescht: {name}"
+                self._apply_virtuoso_eq(profile.name)
+            self.dataChanged.emit()
+
         @Slot()
         def applyVirtuosoLinuxEq(self) -> None:
             profile = self._active_profile_for_target("virtuoso-se")
@@ -1286,7 +1358,7 @@ if QT_QML_IMPORT_ERROR is None:
             self._ensure_virtuoso_defaults(profile)
             active = self._active_virtuoso_preset(profile)
             self._virtuoso_presets = [
-                {"name": preset.name, "selected": preset is active, "bands": self._virtuoso_bands(preset)}
+                {"name": preset.name, "selected": preset is active, "protected": self._virtuoso_preset_protected(profile, preset), "bands": self._virtuoso_bands(preset)}
                 for preset in profile.audio
             ]
             self._virtuoso_eq_bands = self._virtuoso_bands(active)
@@ -1299,6 +1371,16 @@ if QT_QML_IMPORT_ERROR is None:
         def _ensure_virtuoso_defaults(self, profile: Profile) -> None:
             if not profile.audio:
                 profile.audio = [AudioPreset(name="Custom", active=True, bands=[0] * len(ICUE_EQ_FREQUENCIES))]
+            for preset_name, bands in VIRTUOSO_SYSTEM_PRESETS.items():
+                if not any(preset.name.casefold() == preset_name for preset in profile.audio):
+                    display_name = "Bass Boost" if preset_name == "bass boost" else preset_name.title()
+                    profile.audio.append(AudioPreset(name=display_name, active=False, bands=list(bands)))
+            protected = profile.options.get("virtuoso_system_presets")
+            if not isinstance(protected, list):
+                protected = []
+            protected_names = {str(item).casefold() for item in protected}
+            protected_names.update(VIRTUOSO_PROTECTED_PRESETS)
+            profile.options["virtuoso_system_presets"] = sorted(protected_names)
             for preset in profile.audio:
                 preset.bands = self._virtuoso_bands(preset)
             if not any(preset.active for preset in profile.audio):
@@ -1313,7 +1395,7 @@ if QT_QML_IMPORT_ERROR is None:
 
         def _virtuoso_bands(self, preset: AudioPreset) -> list[int]:
             if preset.bands:
-                values = [int(value) for value in preset.bands[: len(ICUE_EQ_FREQUENCIES)]]
+                values = expand_eq_bands([int(value) for value in preset.bands])
             else:
                 values = [
                     preset.bass,
@@ -1329,6 +1411,21 @@ if QT_QML_IMPORT_ERROR is None:
                 ]
             values.extend([0] * (len(ICUE_EQ_FREQUENCIES) - len(values)))
             return [max(VIRTUOSO_EQ_MIN, min(VIRTUOSO_EQ_MAX, int(value))) for value in values[: len(ICUE_EQ_FREQUENCIES)]]
+
+        def _virtuoso_preset_protected(self, profile: Profile, preset: AudioPreset) -> bool:
+            protected = profile.options.get("virtuoso_system_presets")
+            protected_names = {str(item).casefold() for item in protected} if isinstance(protected, list) else set()
+            return preset.name.casefold() in protected_names or preset.name.casefold() in VIRTUOSO_PROTECTED_PRESETS
+
+        def _unique_virtuoso_preset_name(self, profile: Profile, desired: str) -> str:
+            base = desired.strip() or "Eigenes Preset"
+            existing = {preset.name.casefold() for preset in profile.audio}
+            if base.casefold() not in existing:
+                return base
+            index = 2
+            while f"{base} {index}".casefold() in existing:
+                index += 1
+            return f"{base} {index}"
 
         def _virtuoso_accent_zone(self, profile: Profile) -> LightingZone:
             zone = next((item for item in profile.lighting if item.name == "accent_ring"), None)

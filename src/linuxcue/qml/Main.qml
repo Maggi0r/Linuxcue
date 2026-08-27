@@ -39,6 +39,9 @@ ApplicationWindow {
     property string m65SelectedZone: "all"
     property string m65SelectedColor: "#04ff00"
     property string virtuosoSection: "lighting"
+    property string contextVirtuosoPresetName: ""
+    property bool contextVirtuosoPresetProtected: false
+    property string virtuosoPresetDialogMode: "create"
     property string pendingLiveWriteProfile: ""
     property bool contextProfileProtected: false
     property bool showK95Dashboard: linuxcue.currentDevice === "k95"
@@ -339,6 +342,33 @@ ApplicationWindow {
                 }
 
                 Menu {
+                    id: virtuosoPresetMenu
+                    MenuItem {
+                        text: "Neues Preset"
+                        onTriggered: {
+                            virtuosoPresetDialogMode = "create"
+                            virtuosoPresetNameField.text = "Eigenes Preset"
+                            virtuosoPresetDialog.open()
+                        }
+                    }
+                    MenuItem {
+                        text: "Auswahl kopieren"
+                        enabled: contextVirtuosoPresetName !== ""
+                        onTriggered: {
+                            virtuosoPresetDialogMode = "copy"
+                            virtuosoPresetNameField.text = contextVirtuosoPresetName + " Kopie"
+                            virtuosoPresetDialog.open()
+                        }
+                    }
+                    MenuSeparator {}
+                    MenuItem {
+                        text: contextVirtuosoPresetProtected ? "Vordefiniertes Preset ist geschuetzt" : "Preset loeschen"
+                        enabled: contextVirtuosoPresetName !== "" && !contextVirtuosoPresetProtected
+                        onTriggered: linuxcue.deleteVirtuosoPreset(contextVirtuosoPresetName)
+                    }
+                }
+
+                Menu {
                     id: selectionMenu
                     MenuItem { text: "Auswahl kopieren"; onTriggered: copiedSelectionTarget = k95SelectedQuickZone }
                     MenuItem {
@@ -378,6 +408,25 @@ ApplicationWindow {
                         placeholderText: "Name"
                     }
                     onAccepted: linuxcue.renameLightingLayer(contextLayerId, renameLayerField.text)
+                }
+
+                Dialog {
+                    id: virtuosoPresetDialog
+                    title: virtuosoPresetDialogMode === "copy" ? "Virtuoso Preset kopieren" : "Virtuoso Preset anlegen"
+                    modal: true
+                    standardButtons: Dialog.Ok | Dialog.Cancel
+                    width: 340
+                    contentItem: TextField {
+                        id: virtuosoPresetNameField
+                        selectByMouse: true
+                        placeholderText: "Preset-Name"
+                    }
+                    onAccepted: {
+                        if (virtuosoPresetDialogMode === "copy")
+                            linuxcue.copyVirtuosoPreset(contextVirtuosoPresetName, virtuosoPresetNameField.text)
+                        else
+                            linuxcue.createVirtuosoPreset(virtuosoPresetNameField.text)
+                    }
                 }
 
                 Rectangle {
@@ -1692,7 +1741,7 @@ ApplicationWindow {
                                         Item { Layout.fillWidth: true }
                                         ComboBox {
                                             id: virtuosoPresetBox
-                                            Layout.preferredWidth: 190
+                                            Layout.preferredWidth: 220
                                             textRole: "name"
                                             model: linuxcue.virtuosoPresets
                                             currentIndex: activeVirtuosoPresetIndex()
@@ -1701,15 +1750,44 @@ ApplicationWindow {
                                                     linuxcue.selectVirtuosoPreset(linuxcue.virtuosoPresets[index].name, autoLiveWrite)
                                             }
                                         }
+                                        Button {
+                                            text: "+"
+                                            Layout.preferredWidth: 42
+                                            onClicked: {
+                                                virtuosoPresetDialogMode = "create"
+                                                virtuosoPresetNameField.text = "Eigenes Preset"
+                                                virtuosoPresetDialog.open()
+                                            }
+                                        }
+                                        Button {
+                                            text: "Kopie"
+                                            Layout.preferredWidth: 72
+                                            enabled: linuxcue.virtuosoPresets.length > 0
+                                            onClicked: {
+                                                contextVirtuosoPresetName = activeVirtuosoPresetName()
+                                                virtuosoPresetDialogMode = "copy"
+                                                virtuosoPresetNameField.text = contextVirtuosoPresetName + " Kopie"
+                                                virtuosoPresetDialog.open()
+                                            }
+                                        }
+                                        Button {
+                                            text: "Loeschen"
+                                            Layout.preferredWidth: 86
+                                            enabled: linuxcue.virtuosoPresets.length > 0 && !linuxcue.virtuosoPresets[activeVirtuosoPresetIndex()]["protected"]
+                                            onClicked: linuxcue.deleteVirtuosoPreset(activeVirtuosoPresetName())
+                                        }
                                     }
-                                    RowLayout {
+                                    GridLayout {
                                         Layout.fillWidth: true
                                         Layout.fillHeight: true
-                                        spacing: 14
+                                        columns: linuxcue.virtuosoEqBands.length
+                                        columnSpacing: 8
                                         Repeater {
                                             model: linuxcue.virtuosoEqBands
                                             delegate: ColumnLayout {
+                                                Layout.fillWidth: true
                                                 Layout.fillHeight: true
+                                                Layout.minimumWidth: 34
                                                 spacing: 6
                                                 property int liveBandIndex: index
                                                 Text {
@@ -1728,7 +1806,8 @@ ApplicationWindow {
                                                 Slider {
                                                     id: eqSlider
                                                     Layout.fillHeight: true
-                                                    Layout.preferredWidth: 24
+                                                    Layout.fillWidth: true
+                                                    Layout.preferredWidth: 34
                                                     orientation: Qt.Vertical
                                                     from: -48
                                                     to: 48
@@ -1748,7 +1827,7 @@ ApplicationWindow {
                                                     Layout.alignment: Qt.AlignHCenter
                                                     text: linuxcue.virtuosoEqBandLabels[index]
                                                     color: "#9fb6bb"
-                                                    font.pixelSize: 12
+                                                    font.pixelSize: 11
                                                 }
                                             }
                                         }
@@ -1804,8 +1883,6 @@ ApplicationWindow {
                                         checked: linuxcue.virtuosoVoicePrompts
                                         onToggled: linuxcue.setVirtuosoControls(Math.round(sidetoneSlider.value), Math.round(micSlider.value), sleepBox.model[sleepBox.currentIndex], checked, autoLiveWrite)
                                     }
-                                    Button { Layout.fillWidth: true; text: "Flat EQ"; onClicked: linuxcue.applyVirtuosoFlatEq() }
-                                    Button { Layout.fillWidth: true; text: "Loudness"; highlighted: true; onClicked: linuxcue.applyVirtuosoLoudnessEq() }
                                     Button { Layout.fillWidth: true; text: "Apply Linux EQ"; highlighted: true; onClicked: linuxcue.applyVirtuosoLinuxEq() }
                                     Button { Layout.fillWidth: true; text: "Native PipeWire EQ aktivieren"; onClicked: linuxcue.applyVirtuosoPipeWireEq() }
                                     Button { Layout.fillWidth: true; text: "Live EQ stoppen"; onClicked: linuxcue.stopVirtuosoLiveEq() }
