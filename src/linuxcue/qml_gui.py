@@ -507,11 +507,8 @@ if [ -z "$launcher" ]; then
   launcher=/usr/bin/linuxcue
 fi
 echo "Restart launcher: $launcher"
-if command -v setsid >/dev/null 2>&1; then
-  setsid bash -c 'sleep 2; echo "GUI start $(date)" >>/tmp/linuxcue-gui-restart.log; exec "$1" qml-gui >>/tmp/linuxcue-gui-restart.log 2>&1 < /dev/null' _ "$launcher" >/dev/null 2>&1 &
-else
-  nohup bash -c 'sleep 2; echo "GUI start $(date)" >>/tmp/linuxcue-gui-restart.log; exec "$1" qml-gui >>/tmp/linuxcue-gui-restart.log 2>&1 < /dev/null' _ "$launcher" >/dev/null 2>&1 &
-fi
+echo "GUI dispatch $(date)" >>"$gui_log"
+nohup bash -c 'sleep 2; echo "GUI start $(date)" >>/tmp/linuxcue-gui-restart.log; exec "$1" qml-gui >>/tmp/linuxcue-gui-restart.log 2>&1 < /dev/null' _ "$launcher" >/dev/null 2>&1 &
 echo "Restart command dispatched"
 exit 0
 """,
@@ -550,22 +547,25 @@ exit 0
 set -e
 log=/tmp/linuxcue-nvbroadcast-install.log
 exec > >(tee "$log") 2>&1
+trap 'status=$?; echo; echo "NVBroadcast Installation fehlgeschlagen ($status). Log: $log"; read -r -p "Enter zum Schliessen..."; exit $status' ERR
 echo "NVBroadcast installation started $(date)"
-repo_dir="$HOME/.cache/linuxcue/nvidia-broadcast-linux"
 if ! command -v git >/dev/null 2>&1; then
   echo "git fehlt. Bitte zuerst git installieren."
-  read -r -p "Enter zum Schliessen..."
-  exit 1
+  false
 fi
-if [ -d "$repo_dir/.git" ]; then
+work_dir="$HOME/.cache/linuxcue"
+repo_dir="$work_dir/nvidia-broadcast-linux"
+mkdir -p "$work_dir"
+cd "$work_dir"
+if [ -d "nvidia-broadcast-linux/.git" ]; then
   echo "Aktualisiere vorhandenes Repo..."
-  git -C "$repo_dir" pull --ff-only
+  cd nvidia-broadcast-linux
+  git pull --ff-only
 else
   echo "Klone NVBroadcast..."
-  mkdir -p "$(dirname "$repo_dir")"
-  git clone https://github.com/Hkshoonya/nvidia-broadcast-linux.git "$repo_dir"
+  git clone https://github.com/Hkshoonya/nvidia-broadcast-linux.git
+  cd nvidia-broadcast-linux
 fi
-cd "$repo_dir"
 echo "Starte offiziellen Installer..."
 ./install.sh
 echo

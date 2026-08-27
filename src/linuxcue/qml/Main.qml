@@ -1490,7 +1490,8 @@ ApplicationWindow {
 
                         Panel {
                             Layout.fillWidth: true
-                            Layout.fillHeight: true
+                            Layout.fillHeight: virtuosoSection !== "nvidia"
+                            Layout.preferredHeight: virtuosoSection === "nvidia" ? 0 : -1
                             visible: virtuosoSection !== "nvidia"
                             title: virtuosoSection === "eq" ? "Audio Presets" : "Beleuchtungsschichten"
                             ColumnLayout {
