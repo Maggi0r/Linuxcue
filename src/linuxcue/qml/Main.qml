@@ -2166,7 +2166,7 @@ ApplicationWindow {
                         Text {
                             anchors.fill: parent
                             anchors.margins: 14
-                            text: "Naechster Schritt: Geraetebericht erstellen und als Grundlage fuer ein neues linuxcue-Geraetemodul nutzen. Der Bericht enthaelt Diagnoseinfos, aber linuxcue sendet dabei keine Steuerbefehle an das unbekannte Geraet."
+                            text: "Naechster Schritt: Geraetebericht erstellen und an den Entwickler weitergeben. Daraus kann linuxcue automatisch eine Implementierungs-Vorlage vorbereiten. Der Bericht enthaelt Diagnoseinfos, aber linuxcue sendet dabei keine Steuerbefehle an das unbekannte Geraet."
                             color: "#bfe9d0"
                             wrapMode: Text.WordWrap
                             font.pixelSize: 13

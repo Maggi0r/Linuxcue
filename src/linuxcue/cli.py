@@ -53,6 +53,10 @@ def build_parser() -> argparse.ArgumentParser:
     analyze_map.add_argument("path", help="Path to linuxcue-hid-map.json")
     analyze_descriptors = subparsers.add_parser("analyze-descriptors", help="Summarize captured HID report descriptors.")
     analyze_descriptors.add_argument("path", help="Path to linuxcue-hid-descriptors.json")
+    prepare_device = subparsers.add_parser("prepare-device-support", help="Create developer files from a GUI device report JSON.")
+    prepare_device.add_argument("path", help="Path to linuxcue-device-report-*.json")
+    prepare_device.add_argument("--slug", help="Override the generated device slug.")
+    prepare_device.add_argument("--output-dir", default="docs/device-support", help="Directory for generated developer files.")
     capture_plan_parser = subparsers.add_parser("capture-plan", help="Show before/after capture scenarios for protocol mapping.")
     capture_plan_parser.add_argument("--target", help="Optional target slug, for example k95, m65, or virtuoso-se.")
     capture_plan_parser.add_argument("--capability", help="Optional capability, for example eq-presets or rgb-zone-lighting.")
@@ -215,6 +219,18 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "prepare-device-support":
+        from .device_report import prepare_device_support_from_report
+
+        print(
+            json.dumps(
+                prepare_device_support_from_report(args.path, output_dir=args.output_dir, slug=args.slug),
+                indent=2,
+            )
+        )
+        return 0
+
     service = LinuxCueService()
 
     if args.command in {"gui", "qml-gui"}:

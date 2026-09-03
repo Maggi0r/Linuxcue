@@ -1438,6 +1438,8 @@ read -r -p "Enter zum Schliessen..."
 
         def _write_device_report(self, slug: str) -> str:
             self._sync_current_device_details()
+            safe_slug = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in slug)
+            path = Path.home() / f"linuxcue-device-report-{safe_slug}.json"
             product_id = self._current_device_details.get("productId")
             live_status = self.service.live_status(None)
             matching_devices = [
@@ -1452,10 +1454,9 @@ read -r -p "Enter zum Schliessen..."
                 "all_connected_devices": live_status.get("devices", []),
                 "usb_devices": self.service.usb_device_summaries(),
                 "hid_descriptors": self.service.capture_hid_descriptors(),
+                "developer_command": f"linuxcue prepare-device-support {path}",
                 "next_step": "Attach this JSON to a linuxcue issue or share it with the developer to add a dedicated driver module.",
             }
-            safe_slug = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in slug)
-            path = Path.home() / f"linuxcue-device-report-{safe_slug}.json"
             path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
             return str(path)
 
