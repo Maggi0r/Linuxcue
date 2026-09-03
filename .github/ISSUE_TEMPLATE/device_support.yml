@@ -1,0 +1,62 @@
+name: Device support request
+description: Request support for a detected Corsair/iCUE device by attaching a linuxcue device report.
+title: "Device support: "
+labels:
+  - device-support
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping linuxcue grow into a proper iCUE-like Linux application.
+
+        Please create a device report in linuxcue:
+
+        1. Connect the Corsair/iCUE device.
+        2. Open linuxcue and select the unknown device card.
+        3. Click **Geraetebericht speichern**.
+        4. Attach the generated `linuxcue-device-report-*.json` file to this issue.
+
+        linuxcue does not send write commands while creating this report.
+  - type: input
+    id: device-name
+    attributes:
+      label: Device name
+      description: The name shown in linuxcue or on the product box.
+      placeholder: CORSAIR VOID ELITE Wireless Gaming Dongle
+    validations:
+      required: true
+  - type: input
+    id: product-id
+    attributes:
+      label: USB product id
+      description: Optional. linuxcue shows this as VID/PID, for example 0x1b1c / 0x0a51.
+      placeholder: 0x1b1c / 0x0a51
+  - type: dropdown
+    id: device-type
+    attributes:
+      label: Device type
+      options:
+        - Keyboard
+        - Mouse
+        - Headset
+        - Wireless receiver/dongle
+        - Lighting controller
+        - Fan/cooling controller
+        - Other/unknown
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Device report JSON
+      description: Attach the JSON file if possible. If attachments are blocked, paste the JSON here.
+      placeholder: Drag and drop linuxcue-device-report-*.json here.
+    validations:
+      required: true
+  - type: textarea
+    id: expected-features
+    attributes:
+      label: What should linuxcue support for this device?
+      description: Examples: RGB, DPI, buttons/macros, EQ, sidetone, battery, fan curves.
+      placeholder: RGB and battery status would be enough as a first step.

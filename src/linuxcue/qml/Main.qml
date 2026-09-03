@@ -319,6 +319,15 @@ ApplicationWindow {
                     onAccepted: linuxcue.exportProfile(contextProfileName, selectedFile.toString())
                 }
 
+                FileDialog {
+                    id: deviceReportDialog
+                    title: "Geraetebericht speichern"
+                    fileMode: FileDialog.SaveFile
+                    nameFilters: ["linuxcue Geraetebericht (*.json)", "Alle Dateien (*)"]
+                    currentFile: "linuxcue-device-report-" + linuxcue.currentDevice + ".json"
+                    onAccepted: linuxcue.exportDeviceReport(selectedFile.toString())
+                }
+
                 Menu {
                     id: layerMenu
                     MenuItem { text: "Kopieren"; onTriggered: linuxcue.copyLightingLayer(contextLayerId) }
@@ -2166,7 +2175,7 @@ ApplicationWindow {
                         Text {
                             anchors.fill: parent
                             anchors.margins: 14
-                            text: "Naechster Schritt: Geraetebericht erstellen und an den Entwickler weitergeben. Daraus kann linuxcue automatisch eine Implementierungs-Vorlage vorbereiten. Der Bericht enthaelt Diagnoseinfos, aber linuxcue sendet dabei keine Steuerbefehle an das unbekannte Geraet."
+                            text: "Naechster Schritt: Geraetebericht speichern und bei GitHub als Device support request anhaengen. Daraus kann linuxcue automatisch eine Implementierungs-Vorlage vorbereiten. Der Bericht enthaelt Diagnoseinfos, aber linuxcue sendet dabei keine Steuerbefehle an das unbekannte Geraet."
                             color: "#bfe9d0"
                             wrapMode: Text.WordWrap
                             font.pixelSize: 13
@@ -2178,9 +2187,14 @@ ApplicationWindow {
                         spacing: 12
                         Button {
                             Layout.preferredWidth: 230
-                            text: "Geraetebericht erstellen"
+                            text: "Geraetebericht speichern"
                             highlighted: true
-                            onClicked: linuxcue.exportDeviceReport()
+                            onClicked: deviceReportDialog.open()
+                        }
+                        Button {
+                            Layout.preferredWidth: 190
+                            text: "GitHub Issue oeffnen"
+                            onClicked: Qt.openUrlExternally("https://github.com/Maggi0r/Linuxcue/issues/new/choose")
                         }
                         Button {
                             Layout.preferredWidth: 180

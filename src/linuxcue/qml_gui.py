@@ -287,18 +287,23 @@ if QT_QML_IMPORT_ERROR is None:
             self._status = f"Geraet aktiv: {self._current_device_details.get('title', _device_title(slug))}"
             self.dataChanged.emit()
 
-        @Slot()
-        def exportDeviceReport(self) -> None:
+        @Slot(str)
+        def exportDeviceReport(self, url: str = "") -> None:
             if not self._current_device:
                 self._status = "Kein Geraet fuer Bericht ausgewaehlt."
                 self.dataChanged.emit()
                 return
+            path = self._path_from_url(url) if url else None
+            if path is None:
+                path = self._default_device_report_path(self._current_device)
+            if path.suffix.casefold() != ".json":
+                path = path.with_suffix(".json")
             try:
-                path = self._write_device_report(self._current_device)
+                saved = self._write_device_report(self._current_device, path)
             except Exception as exc:
                 self._status = f"Geraetebericht fehlgeschlagen: {exc}"
             else:
-                self._status = f"Geraetebericht gespeichert: {path}"
+                self._status = f"Geraetebericht gespeichert: {saved}. Bitte als GitHub-Issue 'Device support request' anhaengen."
             self.dataChanged.emit()
 
         @Slot(str, str)
@@ -1436,10 +1441,13 @@ read -r -p "Enter zum Schliessen..."
                     self._current_device_details = dict(item)
                     return
 
-        def _write_device_report(self, slug: str) -> str:
-            self._sync_current_device_details()
+        def _default_device_report_path(self, slug: str) -> Path:
             safe_slug = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in slug)
-            path = Path.home() / f"linuxcue-device-report-{safe_slug}.json"
+            return Path.home() / f"linuxcue-device-report-{safe_slug}.json"
+
+        def _write_device_report(self, slug: str, path: Path | None = None) -> str:
+            self._sync_current_device_details()
+            path = path or self._default_device_report_path(slug)
             product_id = self._current_device_details.get("productId")
             live_status = self.service.live_status(None)
             matching_devices = [
@@ -1455,8 +1463,10 @@ read -r -p "Enter zum Schliessen..."
                 "usb_devices": self.service.usb_device_summaries(),
                 "hid_descriptors": self.service.capture_hid_descriptors(),
                 "developer_command": f"linuxcue prepare-device-support {path}",
+                "github_upload_hint": "Open a Device support request issue at https://github.com/Maggi0r/Linuxcue/issues/new/choose and attach this JSON file.",
                 "next_step": "Attach this JSON to a linuxcue issue or share it with the developer to add a dedicated driver module.",
             }
+            path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
             return str(path)
 
