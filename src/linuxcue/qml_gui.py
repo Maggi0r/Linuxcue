@@ -517,7 +517,7 @@ restart_log=/tmp/linuxcue-restart.log
 gui_log=/tmp/linuxcue-gui-restart.log
 : > "$restart_log"
 : > "$gui_log"
-exec >>"$restart_log" 2>&1
+exec > >(tee -a "$restart_log") 2>&1
 echo "Update terminal started $(date)"
 linuxcue install-update --yes
 status=$?
@@ -533,9 +533,38 @@ if [ -z "$launcher" ]; then
   launcher=/usr/bin/linuxcue
 fi
 echo "Restart launcher: $launcher"
+restart_helper=/tmp/linuxcue-gui-restart.sh
+cat >"$restart_helper" <<'EOS'
+#!/usr/bin/env bash
+log=/tmp/linuxcue-gui-restart.log
+exec >>"$log" 2>&1
+echo "GUI restart helper started $(date)"
+sleep 3
+launcher="$(command -v linuxcue || true)"
+if [ -z "$launcher" ]; then
+  launcher=/usr/bin/linuxcue
+fi
+echo "Using launcher: $launcher"
+echo "DISPLAY=${DISPLAY:-}"
+echo "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"
+echo "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-}"
+"$launcher" qml-gui
+status=$?
+echo "GUI exited with status $status at $(date)"
+exit $status
+EOS
+chmod +x "$restart_helper"
 echo "GUI dispatch $(date)" >>"$gui_log"
-nohup bash -c 'sleep 2; echo "GUI start $(date)" >>/tmp/linuxcue-gui-restart.log; exec "$1" qml-gui >>/tmp/linuxcue-gui-restart.log 2>&1 < /dev/null' _ "$launcher" >/dev/null 2>&1 &
-echo "Restart command dispatched"
+if command -v systemd-run >/dev/null 2>&1; then
+  systemd-run --user --collect --unit=linuxcue-gui-restart "$restart_helper" >>"$gui_log" 2>&1
+  dispatch_status=$?
+  echo "systemd-run dispatch status: $dispatch_status" >>"$gui_log"
+fi
+if [ "${dispatch_status:-1}" -ne 0 ]; then
+  setsid "$restart_helper" >/dev/null 2>&1 < /dev/null &
+  echo "setsid fallback dispatched with pid $!" >>"$gui_log"
+fi
+echo "Restart command dispatched. Log: $gui_log"
 exit 0
 """,
                 encoding="utf-8",

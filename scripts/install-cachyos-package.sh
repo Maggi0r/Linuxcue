@@ -9,7 +9,7 @@ if ! command -v pacman >/dev/null 2>&1; then
 fi
 
 echo "Synchronizing CachyOS/Arch package database and installing linuxcue dependencies..."
-if ! sudo pacman -Syu --needed \
+if ! sudo pacman -Syu --needed --noconfirm \
   base-devel \
   git \
   python \
@@ -48,7 +48,7 @@ fi
 
 echo "Building linuxcue package..."
 cd "$repo_root/packaging/arch"
-makepkg -f
+makepkg -f --noconfirm
 
 pkg_file="$(ls -t linuxcue-*.pkg.tar.zst | head -n 1)"
 if [[ -z "${pkg_file}" ]]; then
