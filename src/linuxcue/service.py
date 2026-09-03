@@ -107,6 +107,9 @@ class LinuxCueService:
                     "endpoint_role": self.endpoint_role(device),
                     "target": device.support.model_hint,
                     "family": device.support.family,
+                    "support_level": device.support.support_level,
+                    "capabilities": list(device.support.capabilities),
+                    "next_step": device.support.next_step,
                     "live_writable": access["open_ok"],
                     "open_ok": access["open_ok"],
                     "open_error": access["error"],
@@ -124,6 +127,9 @@ class LinuxCueService:
                 "path": device.path,
                 "target": device.support.model_hint,
                 "family": device.support.family,
+                "support_level": device.support.support_level,
+                "capabilities": list(device.support.capabilities),
+                "next_step": device.support.next_step,
             }
             for device in self.discover_usb_devices()
         ]
@@ -190,6 +196,9 @@ class LinuxCueService:
                     "product_id": f"0x{device.product_id:04x}",
                     "target": device.support.model_hint,
                     "family": device.support.family,
+                    "support_level": device.support.support_level,
+                    "capabilities": list(device.support.capabilities),
+                    "next_step": device.support.next_step,
                     "transport": device.transport,
                     "path": device.path,
                     "interface_number": device.interface_number,

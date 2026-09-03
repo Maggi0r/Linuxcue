@@ -76,6 +76,8 @@ def _device_slug(target: str, family: str) -> str:
 
 
 def _device_title(slug: str) -> str:
+    if slug.startswith("unknown-"):
+        return "Unbekanntes Corsair-Geraet"
     return {
         "k95": "K95 RGB Platinum",
         "m65": "M65 Pro RGB",
@@ -85,6 +87,8 @@ def _device_title(slug: str) -> str:
 
 
 def _device_meta(slug: str) -> tuple[str, str]:
+    if slug.startswith("unknown-"):
+        return ("Erkannt, noch nicht unterstuetzt", "Geraetebericht")
     return {
         "k95": ("Layout: ISO-DE", "RGB keyboard"),
         "m65": ("DPI Profile: Default", "Mouse control"),
@@ -107,6 +111,7 @@ if QT_QML_IMPORT_ERROR is None:
             self._devices: list[dict[str, Any]] = []
             self._current_profile = ""
             self._current_device = ""
+            self._current_device_details: dict[str, Any] = {}
             self._status = "Ready"
             self._lighting_layers: list[dict[str, Any]] = []
             self._k95_key_colors: dict[str, str] = {}
@@ -209,6 +214,10 @@ if QT_QML_IMPORT_ERROR is None:
         def currentDevice(self) -> str:
             return self._current_device
 
+        @Property("QVariantMap", notify=dataChanged)
+        def currentDeviceDetails(self) -> dict[str, Any]:
+            return self._current_device_details
+
         @Property(str, notify=dataChanged)
         def status(self) -> str:
             return self._status
@@ -238,6 +247,7 @@ if QT_QML_IMPORT_ERROR is None:
                 self._current_device = str(self._devices[0]["slug"])
             if not self._devices:
                 self._current_device = ""
+            self._sync_current_device_details()
             self._refresh_lighting_layers()
             self._refresh_virtuoso_state()
             self._refresh_m65_state()
@@ -255,6 +265,7 @@ if QT_QML_IMPORT_ERROR is None:
                 self._current_device = str(self._devices[0]["slug"])
             if not self._devices:
                 self._current_device = ""
+            self._sync_current_device_details()
             self._refresh_lighting_layers()
             self._refresh_virtuoso_state()
             self._refresh_m65_state()
@@ -271,8 +282,23 @@ if QT_QML_IMPORT_ERROR is None:
                 self._refresh_virtuoso_state()
             if slug == "m65":
                 self._refresh_m65_state()
+            self._sync_current_device_details()
             self._sync_m65_dpi_monitor()
-            self._status = f"Geraet aktiv: {_device_title(slug)}"
+            self._status = f"Geraet aktiv: {self._current_device_details.get('title', _device_title(slug))}"
+            self.dataChanged.emit()
+
+        @Slot()
+        def exportDeviceReport(self) -> None:
+            if not self._current_device:
+                self._status = "Kein Geraet fuer Bericht ausgewaehlt."
+                self.dataChanged.emit()
+                return
+            try:
+                path = self._write_device_report(self._current_device)
+            except Exception as exc:
+                self._status = f"Geraetebericht fehlgeschlagen: {exc}"
+            else:
+                self._status = f"Geraetebericht gespeichert: {path}"
             self.dataChanged.emit()
 
         @Slot(str, str)
@@ -1328,7 +1354,81 @@ read -r -p "Enter zum Schliessen..."
                         "wireless": virtuoso_wireless if slug == "virtuoso-se" else False,
                     }
                 )
+            cards.extend(self._unknown_device_cards(status))
             return cards
+
+        def _unknown_device_cards(self, status: dict[str, Any]) -> list[dict[str, Any]]:
+            grouped: dict[str, dict[str, Any]] = {}
+            for device in status.get("devices", []):
+                if not isinstance(device, dict):
+                    continue
+                slug = _device_slug(str(device.get("target", "")), str(device.get("family", "")))
+                if slug != "unknown":
+                    continue
+                product_id = self._normalized_hex_id(device.get("product_id"))
+                vendor_id = self._normalized_hex_id(device.get("vendor_id"))
+                key = f"{vendor_id}-{product_id}"
+                entry = grouped.setdefault(
+                    key,
+                    {
+                        "slug": f"unknown-{vendor_id.replace('0x', '')}-{product_id.replace('0x', '')}",
+                        "title": str(device.get("product") or "Unbekanntes Corsair-Geraet"),
+                        "kind": "Noch nicht unterstuetzt",
+                        "meta": f"{vendor_id.upper()} / {product_id.upper()}",
+                        "state": "detected",
+                        "selected": False,
+                        "imageSource": "",
+                        "wireless": False,
+                        "supportLevel": str(device.get("support_level") or "planned"),
+                        "family": str(device.get("family") or "unknown"),
+                        "vendorId": vendor_id,
+                        "productId": product_id,
+                        "transport": str(device.get("transport") or "unknown"),
+                        "endpointCount": 0,
+                        "liveWritable": False,
+                        "openError": "",
+                        "path": str(device.get("path") or ""),
+                    },
+                )
+                entry["endpointCount"] = int(entry["endpointCount"]) + 1
+                entry["liveWritable"] = bool(entry["liveWritable"]) or bool(device.get("live_writable") or device.get("open_ok"))
+                if device.get("open_error") and not entry["openError"]:
+                    entry["openError"] = str(device.get("open_error"))
+            for entry in grouped.values():
+                endpoints = int(entry["endpointCount"])
+                entry["kind"] = f"{endpoints} Endpunkt{'e' if endpoints != 1 else ''} erkannt"
+                entry["selected"] = entry["slug"] == self._current_device
+            return list(grouped.values())
+
+        def _sync_current_device_details(self) -> None:
+            self._current_device_details = {}
+            for item in self._devices:
+                if item.get("slug") == self._current_device:
+                    self._current_device_details = dict(item)
+                    return
+
+        def _write_device_report(self, slug: str) -> str:
+            self._sync_current_device_details()
+            product_id = self._current_device_details.get("productId")
+            live_status = self.service.live_status(None)
+            matching_devices = [
+                device
+                for device in live_status.get("devices", [])
+                if not product_id or self._normalized_hex_id(device.get("product_id")) == product_id
+            ]
+            report = {
+                "linuxcue_report": "corsair-device-support-request",
+                "selected_device": self._current_device_details,
+                "matching_devices": matching_devices,
+                "all_connected_devices": live_status.get("devices", []),
+                "usb_devices": self.service.usb_device_summaries(),
+                "hid_descriptors": self.service.capture_hid_descriptors(),
+                "next_step": "Attach this JSON to a linuxcue issue or share it with the developer to add a dedicated driver module.",
+            }
+            safe_slug = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "-" for ch in slug)
+            path = Path.home() / f"linuxcue-device-report-{safe_slug}.json"
+            path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+            return str(path)
 
         def _main_profile_summaries(self, summaries: list[dict[str, object]]) -> list[dict[str, Any]]:
             child_groups = {str(item.get("profile_group", "")) for item in summaries if str(item.get("group_role", "")) != "set"}

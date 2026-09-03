@@ -47,6 +47,7 @@ ApplicationWindow {
     property bool showK95Dashboard: linuxcue.currentDevice === "k95"
     property bool showM65Dashboard: linuxcue.currentDevice === "m65"
     property bool showVirtuosoDashboard: linuxcue.currentDevice === "virtuoso-se"
+    property bool showUnknownDeviceDashboard: linuxcue.currentDevice.indexOf("unknown-") === 0
 
     function clearK95Selection() {
         k95SelectedKeys = []
@@ -2058,7 +2059,148 @@ ApplicationWindow {
                 radius: 18
                 color: "#0b1114"
                 border.color: "#24363d"
-                visible: !showK95Dashboard && !showM65Dashboard && !showVirtuosoDashboard
+                visible: showUnknownDeviceDashboard
+
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 1
+                    radius: 17
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#172124" }
+                        GradientStop { position: 0.62; color: "#0b1215" }
+                        GradientStop { position: 1.0; color: "#071013" }
+                    }
+                }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 28
+                    spacing: 18
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 18
+                        Rectangle {
+                            Layout.preferredWidth: 76
+                            Layout.preferredHeight: 76
+                            radius: 22
+                            color: "#20272b"
+                            border.color: "#d6ff28"
+                            border.width: 2
+                            Text {
+                                anchors.centerIn: parent
+                                text: "?"
+                                color: "#d6ff28"
+                                font.bold: true
+                                font.pixelSize: 36
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+                            Text {
+                                text: linuxcue.currentDeviceDetails.title || "Unbekanntes Corsair-Geraet"
+                                color: "white"
+                                font.bold: true
+                                font.pixelSize: 28
+                            }
+                            Text {
+                                text: "Dieses Corsair-Geraet wurde erkannt, hat aber noch kein eigenes linuxcue-Modul."
+                                color: "#9fb6bb"
+                                font.pixelSize: 15
+                            }
+                        }
+                        Rectangle {
+                            Layout.preferredWidth: 190
+                            Layout.preferredHeight: 34
+                            radius: 17
+                            color: "#f2eb00"
+                            Text {
+                                anchors.centerIn: parent
+                                text: "Treiber geplant"
+                                color: "#061010"
+                                font.bold: true
+                                font.pixelSize: 12
+                            }
+                        }
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "linuxcue zeigt unbekannte iCUE-Hardware bewusst sichtbar an, fuehrt aber noch keine Schreibbefehle aus. So bleibt die App sicher, bis Vendor/Product-ID, HID-Endpunkte und Kommandos sauber gemappt sind."
+                        color: "#d7edf0"
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 15
+                        lineHeight: 1.15
+                    }
+
+                    GridLayout {
+                        Layout.fillWidth: true
+                        columns: 2
+                        columnSpacing: 14
+                        rowSpacing: 12
+                        InfoCard {
+                            title: "USB Kennung"
+                            value: (linuxcue.currentDeviceDetails.vendorId || "0x1b1c").toUpperCase() + " / " + (linuxcue.currentDeviceDetails.productId || "unbekannt").toUpperCase()
+                        }
+                        InfoCard {
+                            title: "Verbindung"
+                            value: linuxcue.currentDeviceDetails.transport || "Corsair HID/USB"
+                        }
+                        InfoCard {
+                            title: "Status"
+                            value: "Erkannt, noch nicht unterstuetzt"
+                        }
+                        InfoCard {
+                            title: "Endpunkte"
+                            value: String(linuxcue.currentDeviceDetails.endpointCount || 1) + " erkannt"
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 92
+                        radius: 12
+                        color: "#081712"
+                        border.color: "#214b3a"
+                        Text {
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            text: "Naechster Schritt: Geraetebericht erstellen und als Grundlage fuer ein neues linuxcue-Geraetemodul nutzen. Der Bericht enthaelt Diagnoseinfos, aber linuxcue sendet dabei keine Steuerbefehle an das unbekannte Geraet."
+                            color: "#bfe9d0"
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 13
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+                        Button {
+                            Layout.preferredWidth: 230
+                            text: "Geraetebericht erstellen"
+                            highlighted: true
+                            onClicked: linuxcue.exportDeviceReport()
+                        }
+                        Button {
+                            Layout.preferredWidth: 180
+                            text: "Erneut suchen"
+                            onClicked: linuxcue.refresh()
+                        }
+                        Item { Layout.fillWidth: true }
+                    }
+
+                    Item { Layout.fillHeight: true }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: 18
+                color: "#0b1114"
+                border.color: "#24363d"
+                visible: !showK95Dashboard && !showM65Dashboard && !showVirtuosoDashboard && !showUnknownDeviceDashboard
 
                 Column {
                     anchors.centerIn: parent
