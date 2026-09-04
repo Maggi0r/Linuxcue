@@ -6,9 +6,11 @@ linuxcue should feel like an end-user application, not like a developer tool. Un
 1. Connect the Corsair/iCUE device.
 2. Open linuxcue.
 3. Select the unknown device card.
-4. Click `Geraetebericht speichern`.
+4. Click `Vollstaendigen Bericht speichern`.
 5. Choose a location where the JSON file is easy to find, for example `Downloads`.
 6. Open a GitHub `Device support request` issue and attach the generated `linuxcue-device-report-*.json` file.
+
+The full GUI report includes device identity, USB summaries, HID descriptors, and readable HID feature reports. Users should not need to run terminal commands for the first support request.
 
 ## Developer Flow
 1. Put the JSON report somewhere local.

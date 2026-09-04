@@ -11,6 +11,12 @@ Generated from a linuxcue device report.
 - HID descriptors in report: `1`
 - Current capabilities: `device-detection`
 
+## Linux Capture Notes
+- `capture-descriptors` found one HID descriptor: `0003:1B1C:0A51.0003`.
+- `map-devices --max-report-id 32 --report-length 128` found three HID endpoints for the dongle.
+- Interface `3` opened successfully as `/dev/hidraw1` and returned readable feature reports.
+- The readable reports currently look descriptor-like/repeated, so keep this device read-only until before/after iCUE captures confirm meaningful status or write packets.
+
 ## Developer Flow
 1. Add the generated `KnownDevice` snippet to `src/linuxcue/known_devices.py`.
 2. Choose the first safe support level: `detected`, `scaffolding`, `descriptor-mapped`, or `live-write`.

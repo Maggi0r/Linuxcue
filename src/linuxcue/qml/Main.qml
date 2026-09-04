@@ -2175,7 +2175,7 @@ ApplicationWindow {
                         Text {
                             anchors.fill: parent
                             anchors.margins: 14
-                            text: "Naechster Schritt: Geraetebericht speichern und bei GitHub als Device support request anhaengen. Daraus kann linuxcue automatisch eine Implementierungs-Vorlage vorbereiten. Der Bericht enthaelt Diagnoseinfos, aber linuxcue sendet dabei keine Steuerbefehle an das unbekannte Geraet."
+                            text: "Naechster Schritt: Vollstaendigen Geraetebericht speichern und bei GitHub als Device support request anhaengen. linuxcue sammelt dabei Basisdaten, HID-Descriptoren und lesbare Feature-Reports, sendet aber keine Steuerbefehle an das unbekannte Geraet."
                             color: "#bfe9d0"
                             wrapMode: Text.WordWrap
                             font.pixelSize: 13
@@ -2186,8 +2186,8 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         spacing: 12
                         Button {
-                            Layout.preferredWidth: 230
-                            text: "Geraetebericht speichern"
+                            Layout.preferredWidth: 250
+                            text: "Vollstaendigen Bericht speichern"
                             highlighted: true
                             onClicked: deviceReportDialog.open()
                         }

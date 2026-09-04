@@ -107,6 +107,9 @@ def _implementation_plan(slug: str, device: dict[str, Any], report: dict[str, An
     descriptor_count = descriptors.get("descriptor_count") if isinstance(descriptors, dict) else "unknown"
     if descriptor_count is None:
         descriptor_count = "unknown"
+    endpoint_map = report.get("hid_endpoint_map", {})
+    mapped_endpoint_count = endpoint_map.get("device_count") if isinstance(endpoint_map, dict) else "unknown"
+    readable_reports = _readable_report_summary(endpoint_map)
 
     return f"""# {title}
 
@@ -119,7 +122,11 @@ Generated from a linuxcue device report.
 - Transport: `{transport}`
 - HID endpoints in report: `{endpoint_count}`
 - HID descriptors in report: `{descriptor_count}`
+- Mapped HID endpoints: `{mapped_endpoint_count}`
 - Current capabilities: `{", ".join(str(item) for item in capabilities)}`
+
+## Readable Feature Reports
+{readable_reports}
 
 ## Developer Flow
 1. Add the generated `KnownDevice` snippet to `src/linuxcue/known_devices.py`.
@@ -141,6 +148,36 @@ Generated from a linuxcue device report.
 - Start with read-only detection and user-facing status.
 - Add live writes one feature at a time.
 """
+
+
+def _readable_report_summary(endpoint_map: object) -> str:
+    if not isinstance(endpoint_map, dict):
+        return "- No HID endpoint map was included."
+    endpoints = endpoint_map.get("endpoints")
+    if not isinstance(endpoints, list) or not endpoints:
+        error = endpoint_map.get("error")
+        if error:
+            return f"- Mapping failed: `{error}`"
+        return "- No readable HID endpoint map was included."
+
+    lines: list[str] = []
+    for endpoint in endpoints:
+        if not isinstance(endpoint, dict):
+            continue
+        reports = endpoint.get("feature_reports")
+        readable = [
+            str(report.get("report_id"))
+            for report in reports
+            if isinstance(report, dict) and report.get("ok") is True
+        ] if isinstance(reports, list) else []
+        role = endpoint.get("endpoint_role") or "unknown-role"
+        path = endpoint.get("path") or "unknown-path"
+        product = endpoint.get("product") or endpoint.get("target") or "unknown-device"
+        if readable:
+            lines.append(f"- `{product}` `{role}` `{path}`: {', '.join(readable[:24])}")
+        else:
+            lines.append(f"- `{product}` `{role}` `{path}`: no readable feature reports")
+    return "\n".join(lines) if lines else "- No readable feature reports were found."
 
 
 def _known_device_snippet(slug: str, device: dict[str, Any]) -> str:

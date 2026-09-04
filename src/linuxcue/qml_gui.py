@@ -1492,6 +1492,16 @@ read -r -p "Enter zum Schliessen..."
                 for device in live_status.get("devices", [])
                 if not product_id or self._normalized_hex_id(device.get("product_id")) == product_id
             ]
+            try:
+                hid_endpoint_map: dict[str, Any] = self.service.map_hid_endpoints(max_report_id=32, report_length=128)
+            except Exception as exc:
+                hid_endpoint_map = {
+                    "safe": True,
+                    "write_performed": False,
+                    "ok": False,
+                    "error": str(exc),
+                    "note": "HID endpoint mapping failed while creating the GUI device report.",
+                }
             report = {
                 "linuxcue_report": "corsair-device-support-request",
                 "selected_device": self._current_device_details,
@@ -1499,6 +1509,7 @@ read -r -p "Enter zum Schliessen..."
                 "all_connected_devices": live_status.get("devices", []),
                 "usb_devices": self.service.usb_device_summaries(),
                 "hid_descriptors": self.service.capture_hid_descriptors(),
+                "hid_endpoint_map": hid_endpoint_map,
                 "developer_command": f"linuxcue prepare-device-support {path}",
                 "github_upload_hint": "Open a Device support request issue at https://github.com/Maggi0r/Linuxcue/issues/new/choose and attach this JSON file.",
                 "next_step": "Attach this JSON to a linuxcue issue or share it with the developer to add a dedicated driver module.",

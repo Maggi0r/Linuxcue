@@ -14,10 +14,10 @@ body:
 
         1. Connect the Corsair/iCUE device.
         2. Open linuxcue and select the unknown device card.
-        3. Click **Geraetebericht speichern**.
+        3. Click **Vollstaendigen Bericht speichern**.
         4. Attach the generated `linuxcue-device-report-*.json` file to this issue.
 
-        linuxcue does not send write commands while creating this report.
+        linuxcue collects device identity, HID descriptors, and readable feature reports. It does not send write commands while creating this report.
   - type: input
     id: device-name
     attributes:
