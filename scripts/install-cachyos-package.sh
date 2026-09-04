@@ -8,7 +8,43 @@ if ! command -v pacman >/dev/null 2>&1; then
   exit 1
 fi
 
+wait_for_pacman_lock() {
+  local lock_file="/var/lib/pacman/db.lck"
+  local waited=0
+  local max_wait=180
+
+  while [[ -e "$lock_file" && "$waited" -lt "$max_wait" ]]; do
+    if [[ "$waited" -eq 0 ]]; then
+      echo "Pacman database is locked. Another package manager/update is probably running."
+      echo "Waiting up to ${max_wait}s before continuing..."
+    fi
+    sleep 5
+    waited=$((waited + 5))
+  done
+
+  if [[ -e "$lock_file" ]]; then
+    cat >&2 <<'EOF'
+
+Pacman database is still locked.
+Close other package managers such as Discover, Pamac, Bauh, octopi, or another pacman terminal.
+
+To inspect the lock on Arch/CachyOS:
+
+  sudo fuser -v /var/lib/pacman/db.lck
+
+Only if no pacman/package process is running anymore, remove the stale lock manually:
+
+  sudo rm /var/lib/pacman/db.lck
+
+Then rerun the linuxcue update.
+
+EOF
+    exit 1
+  fi
+}
+
 echo "Synchronizing CachyOS/Arch package database and installing linuxcue dependencies..."
+wait_for_pacman_lock
 if ! sudo pacman -Syu --needed --noconfirm \
   base-devel \
   git \
@@ -57,6 +93,7 @@ if [[ -z "${pkg_file}" ]]; then
 fi
 
 echo "Installing ${pkg_file}..."
+wait_for_pacman_lock
 sudo pacman -U --noconfirm "$pkg_file"
 
 echo "Reloading udev rules..."
