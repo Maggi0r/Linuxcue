@@ -1401,6 +1401,8 @@ read -r -p "Enter zum Schliessen..."
                         "transport": str(device_details.get("transport") or ""),
                         "endpointCount": int(device_details.get("endpoint_count") or 1),
                         "path": str(device_details.get("path") or ""),
+                        "reportIncludes": "Basisdaten, USB-Infos, HID-Descriptoren, Feature-Report-Map",
+                        "nextStep": str(device_details.get("next_step") or "Vollstaendigen Geraetebericht speichern und als GitHub Device support request anhaengen."),
                     }
                 )
             cards.extend(self._unknown_device_cards(status))
@@ -1422,6 +1424,7 @@ read -r -p "Enter zum Schliessen..."
                         "product_id": device.get("product_id"),
                         "transport": device.get("transport"),
                         "path": device.get("path"),
+                        "next_step": device.get("next_step"),
                         "endpoint_count": 0,
                     },
                 )
@@ -1459,6 +1462,8 @@ read -r -p "Enter zum Schliessen..."
                         "liveWritable": False,
                         "openError": "",
                         "path": str(device.get("path") or ""),
+                        "reportIncludes": "Basisdaten, USB-Infos, HID-Descriptoren, Feature-Report-Map",
+                        "nextStep": str(device.get("next_step") or "Vollstaendigen Geraetebericht speichern und als GitHub Device support request anhaengen."),
                     },
                 )
                 entry["endpointCount"] = int(entry["endpointCount"]) + 1

@@ -2164,21 +2164,46 @@ ApplicationWindow {
                             title: "Endpunkte"
                             value: String(linuxcue.currentDeviceDetails.endpointCount || 1) + " erkannt"
                         }
+                        InfoCard {
+                            title: "Bericht sammelt"
+                            value: linuxcue.currentDeviceDetails.reportIncludes || "Basisdaten, HID-Descriptoren und Feature-Reports"
+                        }
+                        InfoCard {
+                            title: "Sicherheit"
+                            value: "Nur Lesen, keine Steuerbefehle"
+                        }
                     }
 
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 92
+                        Layout.preferredHeight: 118
                         radius: 12
                         color: "#081712"
                         border.color: "#214b3a"
-                        Text {
+                        Column {
                             anchors.fill: parent
                             anchors.margins: 14
-                            text: "Naechster Schritt: Vollstaendigen Geraetebericht speichern und bei GitHub als Device support request anhaengen. linuxcue sammelt dabei Basisdaten, HID-Descriptoren und lesbare Feature-Reports, sendet aber keine Steuerbefehle an das unbekannte Geraet."
-                            color: "#bfe9d0"
-                            wrapMode: Text.WordWrap
-                            font.pixelSize: 13
+                            spacing: 6
+                            Text {
+                                text: "Naechster Schritt"
+                                color: "#d6ff28"
+                                font.bold: true
+                                font.pixelSize: 13
+                            }
+                            Text {
+                                width: parent.width
+                                text: linuxcue.currentDeviceDetails.nextStep || "Vollstaendigen Geraetebericht speichern und bei GitHub als Device support request anhaengen."
+                                color: "#bfe9d0"
+                                wrapMode: Text.WordWrap
+                                font.pixelSize: 13
+                            }
+                            Text {
+                                width: parent.width
+                                text: "Beim Speichern werden die Detaildaten erst eingesammelt und in die JSON geschrieben. Die Ansicht bleibt bewusst schlank, damit normale Nutzer nicht mit Rohdaten erschlagen werden."
+                                color: "#8fbba7"
+                                wrapMode: Text.WordWrap
+                                font.pixelSize: 12
+                            }
                         }
                     }
 
