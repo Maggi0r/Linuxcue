@@ -1488,9 +1488,8 @@ read -r -p "Enter zum Schliessen..."
                 if "corsair" not in text and "void" not in text and not any(token in text for token in product_tokens):
                     continue
                 percent = self._extract_upower_value(info.stdout, "percentage")
-                state = self._extract_upower_value(info.stdout, "state")
                 if percent:
-                    return f"Akku: {percent}" + (f" ({state})" if state else "")
+                    return percent
             return ""
 
         @staticmethod

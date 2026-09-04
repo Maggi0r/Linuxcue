@@ -1697,11 +1697,12 @@ ApplicationWindow {
                                 anchors.top: parent.top
                                 anchors.leftMargin: 26
                                 anchors.topMargin: 80
-                                width: Math.max(138, batteryLabel.implicitWidth + 28)
-                                height: 30
-                                radius: 15
-                                color: "#11191a"
+                                width: Math.max(72, batteryLabel.implicitWidth + 26)
+                                height: 28
+                                radius: 14
+                                color: "#101719"
                                 border.color: "#d6ff28"
+                                border.width: 1
                                 Text {
                                     id: batteryLabel
                                     anchors.centerIn: parent
