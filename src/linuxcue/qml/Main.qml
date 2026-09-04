@@ -539,7 +539,6 @@ ApplicationWindow {
                         title: modelData.title
                         kind: modelData.kind
                         meta: modelData.meta
-                        batteryText: modelData.batteryText === undefined ? "" : modelData.batteryText
                         state: modelData.state
                         selected: modelData.slug === linuxcue.currentDevice
                         slug: modelData.slug

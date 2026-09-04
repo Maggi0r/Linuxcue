@@ -6,7 +6,6 @@ Rectangle {
     property string title: ""
     property string kind: ""
     property string meta: ""
-    property string batteryText: ""
     property string state: ""
     property string slug: ""
     property string imageSource: ""
@@ -143,26 +142,4 @@ Rectangle {
         anchors.topMargin: 8
     }
 
-    Rectangle {
-        visible: batteryText !== ""
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.rightMargin: 8
-        anchors.bottomMargin: 7
-        width: batterySmallLabel.implicitWidth + 12
-        height: 20
-        radius: 10
-        color: "#121719"
-        border.color: "#d6ff28"
-        opacity: 0.96
-
-        Text {
-            id: batterySmallLabel
-            anchors.centerIn: parent
-            text: batteryText
-            color: "#d6ff28"
-            font.bold: true
-            font.pixelSize: 10
-        }
-    }
 }
