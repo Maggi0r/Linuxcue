@@ -8,18 +8,29 @@ if ! command -v pacman >/dev/null 2>&1; then
   exit 1
 fi
 
+echo "Requesting administrator rights for package installation..."
+sudo -v
+
 wait_for_pacman_lock() {
   local lock_file="/var/lib/pacman/db.lck"
   local waited=0
   local max_wait=180
 
   while [[ -e "$lock_file" && "$waited" -lt "$max_wait" ]]; do
+    if command -v fuser >/dev/null 2>&1; then
+      if ! sudo fuser -s "$lock_file" >/dev/null 2>&1; then
+        echo "Found stale pacman lock with no active owner. Removing stale lock..."
+        sudo rm -f "$lock_file"
+        break
+      fi
+    fi
     if [[ "$waited" -eq 0 ]]; then
       echo "Pacman database is locked. Another package manager/update is probably running."
       echo "Waiting up to ${max_wait}s before continuing..."
     fi
     sleep 5
     waited=$((waited + 5))
+    sudo -v || true
   done
 
   if [[ -e "$lock_file" ]]; then

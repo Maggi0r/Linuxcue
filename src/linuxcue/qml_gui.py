@@ -526,22 +526,24 @@ restart_log=/tmp/linuxcue-restart.log
 gui_log=/tmp/linuxcue-gui-restart.log
 : > "$restart_log"
 : > "$gui_log"
-exec > >(tee -a "$restart_log") 2>&1
-echo "Update terminal started $(date)"
-linuxcue install-update --yes
-status=$?
-echo
+log() {
+  echo "$@" | tee -a "$restart_log"
+}
+log "Update terminal started $(date)"
+linuxcue install-update --yes 2>&1 | tee -a "$restart_log"
+status=${PIPESTATUS[0]}
+echo | tee -a "$restart_log"
 if [ $status -ne 0 ]; then
-  echo "linuxcue Update fehlgeschlagen."
+  log "linuxcue Update fehlgeschlagen."
   read -r -p "Enter zum Schliessen..."
   exit $status
 fi
-echo "linuxcue Update abgeschlossen. Starte linuxcue neu..."
+log "linuxcue Update abgeschlossen. Starte linuxcue neu..."
 launcher="$(command -v linuxcue || true)"
 if [ -z "$launcher" ]; then
   launcher=/usr/bin/linuxcue
 fi
-echo "Restart launcher: $launcher"
+log "Restart launcher: $launcher"
 restart_helper=/tmp/linuxcue-gui-restart.sh
 cat >"$restart_helper" <<'EOS'
 #!/usr/bin/env bash
@@ -573,7 +575,7 @@ if [ "${dispatch_status:-1}" -ne 0 ]; then
   setsid "$restart_helper" >/dev/null 2>&1 < /dev/null &
   echo "setsid fallback dispatched with pid $!" >>"$gui_log"
 fi
-echo "Restart command dispatched. Log: $gui_log"
+log "Restart command dispatched. Log: $gui_log"
 exit 0
 """,
                 encoding="utf-8",
