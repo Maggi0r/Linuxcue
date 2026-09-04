@@ -113,6 +113,26 @@ TARGET_DEVICES: tuple[KnownDevice, ...] = (
             "Product id is based on the CachyOS VM hidapi discovery output",
         ),
     ),
+    KnownDevice(
+        slug="void-elite-wireless-gaming-dongle-0a51",
+        family="receiver",
+        model_hint="CORSAIR VOID ELITE Wireless Gaming Dongle",
+        match_tokens=("corsair void elite wireless gaming dongle", "void elite wireless gaming dongle", "void elite"),
+        protocol="hid",
+        support_level="detected",
+        next_step="Classify the paired headset and capture safe HID reports before enabling RGB, battery, or audio controls.",
+        companion_slug=None,
+        companion_role="wireless transport for VOID Elite headset mode",
+        capabilities=("device-detection", "wireless-dongle-detected"),
+        default_product_id=0x0A51,
+        default_transport="hid",
+        mock_transport="hid",
+        mock_serial_number="MOCK-VOID-ELITE-WIRELESS-GAMING-DONGLE-0A51-001",
+        mock_notes=(
+            "Generated from a linuxcue device report.",
+            "Read-only detection only until VOID Elite command captures are available.",
+        ),
+    ),
 )
 
 

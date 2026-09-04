@@ -47,7 +47,7 @@ ApplicationWindow {
     property bool showK95Dashboard: linuxcue.currentDevice === "k95"
     property bool showM65Dashboard: linuxcue.currentDevice === "m65"
     property bool showVirtuosoDashboard: linuxcue.currentDevice === "virtuoso-se"
-    property bool showUnknownDeviceDashboard: linuxcue.currentDevice.indexOf("unknown-") === 0
+    property bool showUnknownDeviceDashboard: linuxcue.currentDevice.indexOf("unknown-") === 0 || linuxcue.currentDeviceDetails.supportLevel === "detected" || linuxcue.currentDeviceDetails.supportLevel === "planned"
 
     function clearK95Selection() {
         k95SelectedKeys = []

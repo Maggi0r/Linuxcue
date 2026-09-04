@@ -64,6 +64,8 @@ VIRTUOSO_PROTECTED_PRESETS = set(VIRTUOSO_SYSTEM_PRESETS) | {
 
 def _device_slug(target: str, family: str) -> str:
     text = f"{target} {family}".casefold()
+    if "void elite" in text:
+        return "void-elite"
     if "receiver" in text:
         return "receiver"
     if "virtuoso" in text or "headset" in text:
@@ -82,6 +84,7 @@ def _device_title(slug: str) -> str:
         "k95": "K95 RGB Platinum",
         "m65": "M65 Pro RGB",
         "virtuoso-se": "Virtuoso SE",
+        "void-elite": "VOID Elite Wireless Dongle",
         "receiver": "Wireless Receiver",
     }.get(slug, "Corsair Device")
 
@@ -93,6 +96,7 @@ def _device_meta(slug: str) -> tuple[str, str]:
         "k95": ("Layout: ISO-DE", "RGB keyboard"),
         "m65": ("DPI Profile: Default", "Mouse control"),
         "virtuoso-se": ("Audio Profile: EasyEffects", "Headset EQ"),
+        "void-elite": ("Erkannt, Treiber geplant", "Wireless Dongle"),
         "receiver": ("Link + battery status", "USB receiver"),
     }.get(slug, ("Detected", "Corsair HID"))
 
@@ -1366,8 +1370,13 @@ read -r -p "Enter zum Schliessen..."
             virtuoso_wireless = self._virtuoso_wireless_connected(status)
             if virtuoso_wireless:
                 connected_slugs.add("virtuoso-se")
-            for slug in ["k95", "m65", "virtuoso-se", "receiver"]:
-                if slug not in profile_slugs or slug not in connected_slugs:
+            detected_details = self._detected_device_details(status)
+            for slug in ["k95", "m65", "virtuoso-se", "void-elite", "receiver"]:
+                if slug not in connected_slugs:
+                    continue
+                device_details = detected_details.get(slug, {})
+                support_level = str(device_details.get("support_level") or "")
+                if slug not in profile_slugs and support_level not in {"detected", "planned"}:
                     continue
                 meta, kind = _device_meta(slug)
                 image_source = ""
@@ -1386,10 +1395,38 @@ read -r -p "Enter zum Schliessen..."
                         "selected": slug == self._current_device,
                         "imageSource": image_source,
                         "wireless": virtuoso_wireless if slug == "virtuoso-se" else False,
+                        "supportLevel": support_level or "supported",
+                        "vendorId": self._normalized_hex_id(device_details.get("vendor_id")),
+                        "productId": self._normalized_hex_id(device_details.get("product_id")),
+                        "transport": str(device_details.get("transport") or ""),
+                        "endpointCount": int(device_details.get("endpoint_count") or 1),
+                        "path": str(device_details.get("path") or ""),
                     }
                 )
             cards.extend(self._unknown_device_cards(status))
             return cards
+
+        def _detected_device_details(self, status: dict[str, Any]) -> dict[str, dict[str, Any]]:
+            details: dict[str, dict[str, Any]] = {}
+            for device in status.get("devices", []):
+                if not isinstance(device, dict):
+                    continue
+                slug = _device_slug(str(device.get("target", "")), str(device.get("family", "")))
+                if slug == "unknown":
+                    continue
+                entry = details.setdefault(
+                    slug,
+                    {
+                        "support_level": str(device.get("support_level") or ""),
+                        "vendor_id": device.get("vendor_id"),
+                        "product_id": device.get("product_id"),
+                        "transport": device.get("transport"),
+                        "path": device.get("path"),
+                        "endpoint_count": 0,
+                    },
+                )
+                entry["endpoint_count"] = int(entry.get("endpoint_count") or 0) + 1
+            return details
 
         def _unknown_device_cards(self, status: dict[str, Any]) -> list[dict[str, Any]]:
             grouped: dict[str, dict[str, Any]] = {}
