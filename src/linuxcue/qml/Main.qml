@@ -106,8 +106,10 @@ ApplicationWindow {
     }
 
     function headsetSubtitle() {
-        if (virtuosoSection === "eq" || showVoidEliteDashboard)
+        if (virtuosoSection === "eq" || (showVoidEliteDashboard && virtuosoSection !== "nvidia"))
             return showVoidEliteDashboard ? "15 Band Equalizer ueber sicheren PipeWire-Audiopfad" : "15 Band Equalizer mit Live-PipeWire-Regelung"
+        if (virtuosoSection === "nvidia")
+            return "Optionale KI-Filter fuer Kamera und Mikrofon"
         return "Beleuchtung: Logo/Accent-Ring als gespeicherte Profilfarbe"
     }
 
@@ -537,6 +539,7 @@ ApplicationWindow {
                         title: modelData.title
                         kind: modelData.kind
                         meta: modelData.meta
+                        batteryText: modelData.batteryText === undefined ? "" : modelData.batteryText
                         state: modelData.state
                         selected: modelData.slug === linuxcue.currentDevice
                         slug: modelData.slug
@@ -1512,7 +1515,7 @@ ApplicationWindow {
                                     width: parent.width
                                     y: showVoidEliteDashboard ? 62 : 100
                                     text: "Equalizer"
-                                    selected: virtuosoSection === "eq"
+                                    selected: virtuosoSection === "eq" || (showVoidEliteDashboard && virtuosoSection !== "nvidia")
                                     onClicked: virtuosoSection = "eq"
                                 }
                             }
@@ -1690,6 +1693,26 @@ ApplicationWindow {
                                 }
                             }
                             Rectangle {
+                                visible: showVoidEliteDashboard && (linuxcue.currentDeviceDetails.batteryText || "") !== ""
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.leftMargin: 26
+                                anchors.topMargin: 80
+                                width: Math.max(138, batteryLabel.implicitWidth + 28)
+                                height: 30
+                                radius: 15
+                                color: "#11191a"
+                                border.color: "#d6ff28"
+                                Text {
+                                    id: batteryLabel
+                                    anchors.centerIn: parent
+                                    text: linuxcue.currentDeviceDetails.batteryText || ""
+                                    color: "#d6ff28"
+                                    font.bold: true
+                                    font.pixelSize: 12
+                                }
+                            }
+                            Rectangle {
                                 id: virtuosoHeroImageFrame
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 anchors.top: parent.top
@@ -1715,7 +1738,7 @@ ApplicationWindow {
                                     anchors.centerIn: parent
                                     width: parent.width * 0.92
                                     height: parent.height * 0.94
-                                    source: "../assets/devices/virtuoso-preview-cutout.png"
+                                    source: showVoidEliteDashboard ? "../assets/devices/void-elite-preview.png" : "../assets/devices/virtuoso-preview-cutout.png"
                                     fillMode: Image.PreserveAspectFit
                                     smooth: true
                                     mipmap: true
@@ -1786,7 +1809,7 @@ ApplicationWindow {
                         RowLayout {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            visible: virtuosoSection === "eq" || showVoidEliteDashboard
+                            visible: (virtuosoSection === "eq" || showVoidEliteDashboard) && virtuosoSection !== "nvidia"
                             spacing: 12
 
                             Panel {

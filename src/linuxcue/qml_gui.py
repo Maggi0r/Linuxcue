@@ -1414,6 +1414,8 @@ read -r -p "Enter zum Schliessen..."
                 if slug == "virtuoso-se":
                     image_source = "../assets/devices/virtuoso-wireless-card.png" if virtuoso_wireless else "../assets/devices/virtuoso-usb-card.png"
                     meta = "Wireless Link: 2.4 GHz" if virtuoso_wireless else "USB Link: kabelgebunden"
+                if slug == "void-elite":
+                    image_source = "../assets/devices/void-elite-card.png"
                 battery_text = self._system_battery_text(device_details) if slug == "void-elite" else ""
                 if battery_text:
                     meta = battery_text
