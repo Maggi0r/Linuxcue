@@ -46,8 +46,9 @@ ApplicationWindow {
     property bool contextProfileProtected: false
     property bool showK95Dashboard: linuxcue.currentDevice === "k95"
     property bool showM65Dashboard: linuxcue.currentDevice === "m65"
-    property bool showVirtuosoDashboard: linuxcue.currentDevice === "virtuoso-se"
-    property bool showUnknownDeviceDashboard: linuxcue.currentDevice.indexOf("unknown-") === 0 || linuxcue.currentDeviceDetails.supportLevel === "detected" || linuxcue.currentDeviceDetails.supportLevel === "planned"
+    property bool showVoidEliteDashboard: linuxcue.currentDevice === "void-elite"
+    property bool showVirtuosoDashboard: linuxcue.currentDevice === "virtuoso-se" || showVoidEliteDashboard
+    property bool showUnknownDeviceDashboard: !showVirtuosoDashboard && (linuxcue.currentDevice.indexOf("unknown-") === 0 || linuxcue.currentDeviceDetails.supportLevel === "detected" || linuxcue.currentDeviceDetails.supportLevel === "planned")
 
     function clearK95Selection() {
         k95SelectedKeys = []
@@ -98,6 +99,16 @@ ApplicationWindow {
         var values = [5, 10, 20, 30, 60]
         var found = values.indexOf(value)
         return found >= 0 ? found : 2
+    }
+
+    function headsetTitle() {
+        return showVoidEliteDashboard ? "VOID Elite Wireless" : "Virtuoso SE"
+    }
+
+    function headsetSubtitle() {
+        if (virtuosoSection === "eq" || showVoidEliteDashboard)
+            return showVoidEliteDashboard ? "15 Band Equalizer ueber sicheren PipeWire-Audiopfad" : "15 Band Equalizer mit Live-PipeWire-Regelung"
+        return "Beleuchtung: Logo/Accent-Ring als gespeicherte Profilfarbe"
     }
 
     function m65ZoneColor(zone) {
@@ -531,7 +542,11 @@ ApplicationWindow {
                         slug: modelData.slug
                         imageSource: modelData.imageSource === undefined ? "" : modelData.imageSource
                         wireless: modelData.wireless === true
-                        onClicked: linuxcue.selectDevice(modelData.slug)
+                        onClicked: {
+                            if (modelData.slug === "void-elite")
+                                virtuosoSection = "eq"
+                            linuxcue.selectDevice(modelData.slug)
+                        }
                     }
                 }
 
@@ -1465,7 +1480,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 260
                             Layout.alignment: Qt.AlignTop
-                            title: "VIRTUOSO SE"
+                            title: headsetTitle().toUpperCase()
                             Item {
                                 anchors.fill: parent
                                 anchors.margins: 12
@@ -1482,19 +1497,20 @@ ApplicationWindow {
                                     width: parent.width
                                     y: 24
                                     text: "Beleuchtungseffekte"
+                                    visible: !showVoidEliteDashboard
                                     selected: virtuosoSection === "lighting"
                                     onClicked: virtuosoSection = "lighting"
                                 }
                                 NavLine {
                                     width: parent.width
-                                    y: 62
+                                    y: showVoidEliteDashboard ? 24 : 62
                                     text: "NVIDIA"
                                     selected: virtuosoSection === "nvidia"
                                     onClicked: virtuosoSection = "nvidia"
                                 }
                                 NavLine {
                                     width: parent.width
-                                    y: 100
+                                    y: showVoidEliteDashboard ? 62 : 100
                                     text: "Equalizer"
                                     selected: virtuosoSection === "eq"
                                     onClicked: virtuosoSection = "eq"
@@ -1507,7 +1523,7 @@ ApplicationWindow {
                             Layout.fillHeight: virtuosoSection !== "nvidia"
                             Layout.preferredHeight: virtuosoSection === "nvidia" ? 0 : -1
                             visible: virtuosoSection !== "nvidia"
-                            title: virtuosoSection === "eq" ? "Audio Presets" : "Beleuchtungsschichten"
+                            title: (virtuosoSection === "eq" || showVoidEliteDashboard) ? "Audio Presets" : "Beleuchtungsschichten"
                             ColumnLayout {
                                 anchors.fill: parent
                                 anchors.margins: 14
@@ -1517,9 +1533,9 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: 30
                                     text: "+"
-                                    visible: virtuosoSection === "lighting" || virtuosoSection === "eq"
+                                    visible: virtuosoSection === "lighting" || virtuosoSection === "eq" || showVoidEliteDashboard
                                     onClicked: {
-                                        if (virtuosoSection === "eq") {
+                                        if (virtuosoSection === "eq" || showVoidEliteDashboard) {
                                             contextVirtuosoPresetName = activeVirtuosoPresetName()
                                             contextVirtuosoPresetProtected = false
                                             virtuosoPresetDialogMode = "create"
@@ -1541,7 +1557,7 @@ ApplicationWindow {
                                     Layout.preferredHeight: 30
                                     radius: 4
                                     color: "#565656"
-                                    visible: virtuosoSection === "lighting"
+                                    visible: virtuosoSection === "lighting" && !showVoidEliteDashboard
                                     Rectangle {
                                         width: 18
                                         height: 18
@@ -1566,7 +1582,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 34
                                         radius: 6
-                                        visible: virtuosoSection === "eq"
+                                        visible: virtuosoSection === "eq" || showVoidEliteDashboard
                                         color: modelData.selected ? "#565656" : "transparent"
                                         border.color: modelData.selected ? "#12e8ff" : "transparent"
                                         Text {
@@ -1599,7 +1615,7 @@ ApplicationWindow {
                                         anchors.fill: parent
                                         acceptedButtons: Qt.RightButton
                                         onClicked: function(mouse) {
-                                            if (virtuosoSection === "eq" && mouse.button === Qt.RightButton) {
+                                            if ((virtuosoSection === "eq" || showVoidEliteDashboard) && mouse.button === Qt.RightButton) {
                                                 contextVirtuosoPresetName = activeVirtuosoPresetName()
                                                 contextVirtuosoPresetProtected = linuxcue.virtuosoPresets.length > 0 ? Boolean(linuxcue.virtuosoPresets[activeVirtuosoPresetIndex()]["protected"]) : false
                                                 virtuosoPresetMenu.popup()
@@ -1608,7 +1624,7 @@ ApplicationWindow {
                                     }
                                 }
                                 Text {
-                                    text: virtuosoSection === "eq" ? "Native PipeWire EQ  >" : "Beleuchtungsbibliothek  >"
+                                    text: (virtuosoSection === "eq" || showVoidEliteDashboard) ? "Native PipeWire EQ  >" : "Beleuchtungsbibliothek  >"
                                     color: "#8f9da3"
                                     font.pixelSize: 12
                                 }
@@ -1623,7 +1639,7 @@ ApplicationWindow {
 
                         Rectangle {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: virtuosoSection === "lighting" ? Math.min(390, Math.max(300, window.height * 0.38)) : Math.min(260, Math.max(220, window.height * 0.28))
+                            Layout.preferredHeight: (virtuosoSection === "lighting" && !showVoidEliteDashboard) ? Math.min(390, Math.max(300, window.height * 0.38)) : Math.min(260, Math.max(220, window.height * 0.28))
                             radius: 20
                             color: "#1d2020"
                             border.color: "#24343a"
@@ -1642,7 +1658,7 @@ ApplicationWindow {
                                 anchors.top: parent.top
                                 anchors.leftMargin: 26
                                 anchors.topMargin: 20
-                                text: "Virtuoso SE"
+                                text: headsetTitle()
                                 color: "white"
                                 font.bold: true
                                 font.pixelSize: 22
@@ -1652,7 +1668,7 @@ ApplicationWindow {
                                 anchors.top: parent.top
                                 anchors.leftMargin: 26
                                 anchors.topMargin: 52
-                                text: virtuosoSection === "eq" ? "15 Band Equalizer mit Live-PipeWire-Regelung" : "Beleuchtung: Logo/Accent-Ring als gespeicherte Profilfarbe"
+                                text: headsetSubtitle()
                                 color: "#91aeb2"
                                 font.pixelSize: 13
                             }
@@ -1667,7 +1683,7 @@ ApplicationWindow {
                                 color: "#d6ff28"
                                 Text {
                                     anchors.centerIn: parent
-                                    text: "EQ + RGB mapped"
+                                    text: showVoidEliteDashboard ? "EQ mapped" : "EQ + RGB mapped"
                                     color: "#061010"
                                     font.bold: true
                                     font.pixelSize: 12
@@ -1710,7 +1726,7 @@ ApplicationWindow {
                         RowLayout {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            visible: virtuosoSection === "lighting"
+                            visible: virtuosoSection === "lighting" && !showVoidEliteDashboard
                             spacing: 12
 
                             Panel {
@@ -1770,7 +1786,7 @@ ApplicationWindow {
                         RowLayout {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            visible: virtuosoSection === "eq"
+                            visible: virtuosoSection === "eq" || showVoidEliteDashboard
                             spacing: 12
 
                             Panel {
@@ -1843,16 +1859,17 @@ ApplicationWindow {
                             Panel {
                                 Layout.preferredWidth: 330
                                 Layout.fillHeight: true
-                                title: "Headset-Regler"
+                                title: showVoidEliteDashboard ? "Ausgabe" : "Headset-Regler"
                                 ColumnLayout {
                                     anchors.fill: parent
                                     anchors.margins: 18
                                     anchors.topMargin: 54
                                     spacing: 12
-                                    Text { text: "Mic Sidetone"; color: "white"; font.bold: true; font.pixelSize: 13 }
+                                    Text { text: "Mic Sidetone"; color: "white"; font.bold: true; font.pixelSize: 13; visible: !showVoidEliteDashboard }
                                     Slider {
                                         id: sidetoneSlider
                                         Layout.fillWidth: true
+                                        visible: !showVoidEliteDashboard
                                         from: 0
                                         to: 100
                                         value: linuxcue.virtuosoSidetone
@@ -1861,10 +1878,11 @@ ApplicationWindow {
                                                 linuxcue.setVirtuosoControls(Math.round(value), Math.round(micSlider.value), sleepBox.model[sleepBox.currentIndex], voiceSwitch.checked, autoLiveWrite)
                                         }
                                     }
-                                    Text { text: "Mic Level"; color: "white"; font.bold: true; font.pixelSize: 13 }
+                                    Text { text: "Mic Level"; color: "white"; font.bold: true; font.pixelSize: 13; visible: !showVoidEliteDashboard }
                                     Slider {
                                         id: micSlider
                                         Layout.fillWidth: true
+                                        visible: !showVoidEliteDashboard
                                         from: 0
                                         to: 100
                                         value: linuxcue.virtuosoMicLevel
@@ -1900,10 +1918,11 @@ ApplicationWindow {
                                             }
                                         }
                                     }
-                                    Text { text: "Sleep Timer"; color: "white"; font.bold: true; font.pixelSize: 13 }
+                                    Text { text: "Sleep Timer"; color: "white"; font.bold: true; font.pixelSize: 13; visible: !showVoidEliteDashboard }
                                     ComboBox {
                                         id: sleepBox
                                         Layout.fillWidth: true
+                                        visible: !showVoidEliteDashboard
                                         model: [5, 10, 20, 30, 60]
                                         currentIndex: sleepTimerIndex(linuxcue.virtuosoSleepTimer)
                                         textRole: ""
@@ -1911,6 +1930,7 @@ ApplicationWindow {
                                     }
                                     Switch {
                                         id: voiceSwitch
+                                        visible: !showVoidEliteDashboard
                                         text: "Voice Prompts"
                                         checked: linuxcue.virtuosoVoicePrompts
                                         onToggled: linuxcue.setVirtuosoControls(Math.round(sidetoneSlider.value), Math.round(micSlider.value), sleepBox.model[sleepBox.currentIndex], checked, autoLiveWrite)
@@ -1927,7 +1947,7 @@ ApplicationWindow {
                                         Text {
                                             anchors.fill: parent
                                             anchors.margins: 12
-                                            text: "Native PipeWire EQ nutzt eine kontrollierbare Biquad-Kette. Nach einmaliger Aktivierung werden Slider live an PipeWire uebertragen."
+                                            text: showVoidEliteDashboard ? "VOID Elite nutzt hier bewusst nur den Linux-Audiopfad. RGB, Akku und Dongle-Steuerung bleiben gesperrt, bis echte iCUE-HID-Captures vorliegen." : "Native PipeWire EQ nutzt eine kontrollierbare Biquad-Kette. Nach einmaliger Aktivierung werden Slider live an PipeWire uebertragen."
                                             color: "#d7edf0"
                                             wrapMode: Text.WordWrap
                                             font.pixelSize: 12

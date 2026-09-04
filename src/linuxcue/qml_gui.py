@@ -96,7 +96,7 @@ def _device_meta(slug: str) -> tuple[str, str]:
         "k95": ("Layout: ISO-DE", "RGB keyboard"),
         "m65": ("DPI Profile: Default", "Mouse control"),
         "virtuoso-se": ("Audio Profile: EasyEffects", "Headset EQ"),
-        "void-elite": ("Erkannt, Treiber geplant", "Wireless Dongle"),
+        "void-elite": ("PipeWire EQ: bereit", "Wireless Headset"),
         "receiver": ("Link + battery status", "USB receiver"),
     }.get(slug, ("Detected", "Corsair HID"))
 
@@ -283,6 +283,8 @@ if QT_QML_IMPORT_ERROR is None:
             for item in self._devices:
                 item["selected"] = item["slug"] == slug
             if slug == "virtuoso-se":
+                self._refresh_virtuoso_state()
+            if slug == "void-elite":
                 self._refresh_virtuoso_state()
             if slug == "m65":
                 self._refresh_m65_state()
@@ -1100,9 +1102,9 @@ read -r -p "Enter zum Schliessen..."
 
         @Slot(str, bool)
         def applyVirtuosoColor(self, color: str, live: bool = True) -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             zone = self._virtuoso_accent_zone(profile)
@@ -1110,20 +1112,25 @@ read -r -p "Enter zum Schliessen..."
             zone.mode = "static"
             self.service.save_profile(profile)
             self._refresh_virtuoso_state()
-            self._status = f"Virtuoso Accent-Ring gespeichert: {color}"
+            label = self._headset_profile_label(profile)
+            self._status = f"{label} Accent/Logo-Farbe gespeichert: {color}"
+            if profile.target_device == "void-elite":
+                self._status = f"{label} Farbe gespeichert. HID-RGB ist noch nicht verifiziert."
+                self.dataChanged.emit()
+                return
             if live:
                 try:
                     result = self.service.write_virtuoso_profile_live(profile.name, packet_kind="rgb")
-                    self._status = f"Virtuoso RGB Live Write OK: {result.packet_count} packets"
+                    self._status = f"{label} RGB Live Write OK: {result.packet_count} packets"
                 except Exception as exc:
-                    self._status = f"Virtuoso RGB gespeichert, Live Write fehlgeschlagen: {exc}"
+                    self._status = f"{label} RGB gespeichert, Live Write fehlgeschlagen: {exc}"
             self.dataChanged.emit()
 
         @Slot(str, bool)
         def selectVirtuosoPreset(self, name: str, live: bool = True) -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             self._ensure_virtuoso_defaults(profile)
@@ -1135,16 +1142,16 @@ read -r -p "Enter zum Schliessen..."
                 profile.audio[0].active = True
             self.service.save_profile(profile)
             self._refresh_virtuoso_state()
-            self._status = f"Virtuoso EQ Preset aktiv: {name}"
+            self._status = f"{self._headset_profile_label(profile)} EQ Preset aktiv: {name}"
             if live:
                 self._apply_virtuoso_eq(profile.name)
             self.dataChanged.emit()
 
         @Slot(int, int, bool)
         def setVirtuosoBand(self, index: int, value: int, live: bool = False) -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             self._ensure_virtuoso_defaults(profile)
@@ -1155,16 +1162,16 @@ read -r -p "Enter zum Schliessen..."
                 preset.bands = bands
                 self.service.save_profile(profile)
                 self._refresh_virtuoso_state()
-                self._status = f"Virtuoso EQ Band {index + 1} gespeichert."
+                self._status = f"{self._headset_profile_label(profile)} EQ Band {index + 1} gespeichert."
                 if live:
                     self._apply_virtuoso_eq(profile.name)
             self.dataChanged.emit()
 
         @Slot(int, int, int, bool, bool)
         def setVirtuosoControls(self, sidetone: int, mic_level: int, sleep_timer: int, voice_prompts: bool, live: bool = True) -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             self._ensure_virtuoso_defaults(profile)
@@ -1174,20 +1181,25 @@ read -r -p "Enter zum Schliessen..."
             profile.headset.voice_prompt_enabled = bool(voice_prompts)
             self.service.save_profile(profile)
             self._refresh_virtuoso_state()
-            self._status = "Virtuoso Headset-Regler gespeichert."
+            label = self._headset_profile_label(profile)
+            self._status = f"{label} Headset-Regler gespeichert."
+            if profile.target_device == "void-elite":
+                self._status = f"{label} Regler gespeichert. HID-Steuerung ist noch nicht verifiziert."
+                self.dataChanged.emit()
+                return
             if live:
                 try:
                     result = self.service.write_virtuoso_profile_live(profile.name, packet_kind="control")
-                    self._status = f"Virtuoso Control Live Write OK: {result.packet_count} packets"
+                    self._status = f"{label} Control Live Write OK: {result.packet_count} packets"
                 except Exception as exc:
-                    self._status = f"Virtuoso Control gespeichert, Live Write fehlgeschlagen: {exc}"
+                    self._status = f"{label} Control gespeichert, Live Write fehlgeschlagen: {exc}"
             self.dataChanged.emit()
 
         @Slot(int, bool)
         def setVirtuosoVolume(self, volume: int, live: bool = True) -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             self._ensure_virtuoso_defaults(profile)
@@ -1195,23 +1207,24 @@ read -r -p "Enter zum Schliessen..."
             profile.options["virtuoso_volume"] = clamped
             self.service.save_profile(profile)
             self._virtuoso_volume = clamped
-            self._status = f"Virtuoso Lautstaerke gespeichert: {clamped}%"
+            label = self._headset_profile_label(profile)
+            self._status = f"{label} Lautstaerke gespeichert: {clamped}%"
             if live:
                 try:
                     result = self.service.set_virtuoso_eq_volume(clamped)
                     if result.get("ok"):
-                        self._status = f"Virtuoso Lautstaerke aktiv: {clamped}%"
+                        self._status = f"{label} Lautstaerke aktiv: {clamped}%"
                     else:
-                        self._status = f"Virtuoso Lautstaerke gespeichert, PipeWire abgelehnt: {result.get('stderr', '')}"
+                        self._status = f"{label} Lautstaerke gespeichert, PipeWire abgelehnt: {result.get('stderr', '')}"
                 except Exception as exc:
-                    self._status = f"Virtuoso Lautstaerke gespeichert, Live-Set fehlgeschlagen: {exc}"
+                    self._status = f"{label} Lautstaerke gespeichert, Live-Set fehlgeschlagen: {exc}"
             self.dataChanged.emit()
 
         @Slot()
         def applyVirtuosoFlatEq(self) -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             self._ensure_virtuoso_defaults(profile)
@@ -1224,15 +1237,15 @@ read -r -p "Enter zum Schliessen..."
                 preset.active = preset is flat
             self.service.save_profile(profile)
             self._refresh_virtuoso_state()
-            self._status = "Virtuoso Flat EQ gespeichert."
+            self._status = f"{self._headset_profile_label(profile)} Flat EQ gespeichert."
             self._apply_virtuoso_eq(profile.name)
             self.dataChanged.emit()
 
         @Slot()
         def applyVirtuosoLoudnessEq(self) -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             self._ensure_virtuoso_defaults(profile)
@@ -1245,15 +1258,15 @@ read -r -p "Enter zum Schliessen..."
                 preset.active = preset is loudness
             self.service.save_profile(profile)
             self._refresh_virtuoso_state()
-            self._status = "Virtuoso Loudness EQ gespeichert."
+            self._status = f"{self._headset_profile_label(profile)} Loudness EQ gespeichert."
             self._apply_virtuoso_eq(profile.name)
             self.dataChanged.emit()
 
         @Slot(str)
         def createVirtuosoPreset(self, name: str = "") -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             self._ensure_virtuoso_defaults(profile)
@@ -1264,15 +1277,15 @@ read -r -p "Enter zum Schliessen..."
             profile.audio.append(preset)
             self.service.save_profile(profile)
             self._refresh_virtuoso_state()
-            self._status = f"Virtuoso Preset erstellt: {preset_name}"
+            self._status = f"{self._headset_profile_label(profile)} Preset erstellt: {preset_name}"
             self._apply_virtuoso_eq(profile.name)
             self.dataChanged.emit()
 
         @Slot(str, str)
         def copyVirtuosoPreset(self, source_name: str = "", new_name: str = "") -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             self._ensure_virtuoso_defaults(profile)
@@ -1284,15 +1297,15 @@ read -r -p "Enter zum Schliessen..."
             profile.audio.append(clone)
             self.service.save_profile(profile)
             self._refresh_virtuoso_state()
-            self._status = f"Virtuoso Preset kopiert: {preset_name}"
+            self._status = f"{self._headset_profile_label(profile)} Preset kopiert: {preset_name}"
             self._apply_virtuoso_eq(profile.name)
             self.dataChanged.emit()
 
         @Slot(str)
         def deleteVirtuosoPreset(self, name: str) -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             self._ensure_virtuoso_defaults(profile)
@@ -1310,15 +1323,15 @@ read -r -p "Enter zum Schliessen..."
                     profile.audio[0].active = True
                 self.service.save_profile(profile)
                 self._refresh_virtuoso_state()
-                self._status = f"Virtuoso Preset geloescht: {name}"
+                self._status = f"{self._headset_profile_label(profile)} Preset geloescht: {name}"
                 self._apply_virtuoso_eq(profile.name)
             self.dataChanged.emit()
 
         @Slot()
         def applyVirtuosoLinuxEq(self) -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             self._apply_virtuoso_eq(profile.name)
@@ -1326,9 +1339,9 @@ read -r -p "Enter zum Schliessen..."
 
         @Slot()
         def applyVirtuosoPipeWireEq(self) -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
-                self._status = "Kein Virtuoso-Profil aktiv."
+                self._status = "Kein Headset-Profil aktiv."
                 self.dataChanged.emit()
                 return
             self._virtuoso_eq_backend = "pipewire"
@@ -1346,7 +1359,7 @@ read -r -p "Enter zum Schliessen..."
         def stopVirtuosoLiveEq(self) -> None:
             try:
                 result = self.service.stop_virtuoso_live_eq()
-                profile = self._active_profile_for_target("virtuoso-se")
+                profile = self._active_headset_profile()
                 if profile is not None:
                     profile.options["virtuoso_eq_backend"] = "profile"
                     self.service.save_profile(profile)
@@ -1378,7 +1391,7 @@ read -r -p "Enter zum Schliessen..."
                     continue
                 device_details = detected_details.get(slug, {})
                 support_level = str(device_details.get("support_level") or "")
-                if slug not in profile_slugs and support_level not in {"detected", "planned"}:
+                if slug not in profile_slugs and support_level not in {"detected", "planned", "audio-mapped"}:
                     continue
                 meta, kind = _device_meta(slug)
                 image_source = ""
@@ -1629,8 +1642,20 @@ read -r -p "Enter zum Schliessen..."
                     return child
             return None
 
+        def _active_headset_profile(self) -> Profile | None:
+            target = "void-elite" if self._current_device == "void-elite" else "virtuoso-se"
+            profile = self._active_profile_for_target(target)
+            if profile is not None:
+                return profile
+            fallback_name = "Standard Profil-void-elite" if target == "void-elite" else "Standard Profil-virtuoso"
+            return self.service.load_profile(fallback_name)
+
+        @staticmethod
+        def _headset_profile_label(profile: Profile) -> str:
+            return "VOID Elite" if profile.target_device == "void-elite" else "Virtuoso"
+
         def _refresh_virtuoso_state(self) -> None:
-            profile = self._active_profile_for_target("virtuoso-se")
+            profile = self._active_headset_profile()
             if profile is None:
                 self._virtuoso_presets = []
                 self._virtuoso_eq_bands = [0] * len(ICUE_EQ_FREQUENCIES)

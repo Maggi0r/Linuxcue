@@ -49,6 +49,7 @@ SYSTEM_PROFILE_CHILDREN = {
     "keyboard": ("k95", "keyboard", "Standard Profil-k95"),
     "mouse": ("m65", "mouse", "Standard Profil-m65"),
     "headset": ("virtuoso-se", "headset", "Standard Profil-virtuoso"),
+    "void-headset": ("void-elite", "headset", "Standard Profil-void-elite"),
 }
 
 
@@ -403,6 +404,15 @@ class LinuxCueService:
     def create_virtuoso_profile(self, name: str) -> Profile:
         return build_virtuoso_default_profile(name)
 
+    def create_void_elite_profile(self, name: str) -> Profile:
+        profile = build_virtuoso_default_profile(name)
+        profile.target_device = "void-elite"
+        profile.target_family = "headset"
+        profile.description = "VOID Elite Wireless PipeWire EQ profile; HID writes are disabled until the dongle protocol is verified."
+        profile.options["hardware_live_write"] = "blocked-until-capture"
+        profile.options["virtuoso_eq_backend"] = "pipewire"
+        return profile
+
     def create_profile_for_target(self, target: str, name: str) -> Profile:
         if target == "k95":
             return self.create_k95_profile(name)
@@ -410,6 +420,8 @@ class LinuxCueService:
             return self.create_m65_profile(name)
         if target in {"virtuoso-rgb", "virtuoso-se"}:
             return self.create_virtuoso_profile(name)
+        if target == "void-elite":
+            return self.create_void_elite_profile(name)
         return self.create_default_profile(name)
 
     def ensure_default_profiles(self) -> list[str]:
@@ -638,8 +650,8 @@ class LinuxCueService:
         profile = self.load_profile(name)
         if profile is None:
             raise RuntimeError(f"Profile not found: {name}")
-        if profile.target_device != "virtuoso-se":
-            raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
+        if profile.target_device not in {"virtuoso-se", "void-elite"}:
+            raise RuntimeError(f"Profile is not a supported headset EQ profile: {name}")
         target = Path(output_dir) if output_dir else None
         paths = export_virtuoso_easyeffects_presets(profile, target)
         return {
@@ -658,8 +670,8 @@ class LinuxCueService:
         profile = self.load_profile(name)
         if profile is None:
             raise RuntimeError(f"Profile not found: {name}")
-        if profile.target_device != "virtuoso-se":
-            raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
+        if profile.target_device not in {"virtuoso-se", "void-elite"}:
+            raise RuntimeError(f"Profile is not a supported headset EQ profile: {name}")
         selected = self._selected_audio_preset(profile, preset_name)
         path = export_virtuoso_easyeffects_preset(profile, selected)
         exported_name = preset_export_name(profile, selected)
@@ -692,8 +704,8 @@ class LinuxCueService:
         profile = self.load_profile(name)
         if profile is None:
             raise RuntimeError(f"Profile not found: {name}")
-        if profile.target_device != "virtuoso-se":
-            raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
+        if profile.target_device not in {"virtuoso-se", "void-elite"}:
+            raise RuntimeError(f"Profile is not a supported headset EQ profile: {name}")
         selected = self._selected_audio_preset(profile, preset_name)
         path = write_virtuoso_pipewire_eq(profile, selected)
         reload_result: dict[str, object] | None = None
@@ -739,8 +751,8 @@ class LinuxCueService:
         profile = self.load_profile(name)
         if profile is None:
             raise RuntimeError(f"Profile not found: {name}")
-        if profile.target_device != "virtuoso-se":
-            raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
+        if profile.target_device not in {"virtuoso-se", "void-elite"}:
+            raise RuntimeError(f"Profile is not a supported headset EQ profile: {name}")
         selected = self._selected_audio_preset(profile, preset_name)
         return start_virtuoso_runtime_eq(profile, selected)
 
@@ -753,8 +765,8 @@ class LinuxCueService:
         profile = self.load_profile(name)
         if profile is None:
             raise RuntimeError(f"Profile not found: {name}")
-        if profile.target_device != "virtuoso-se":
-            raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
+        if profile.target_device not in {"virtuoso-se", "void-elite"}:
+            raise RuntimeError(f"Profile is not a supported headset EQ profile: {name}")
         selected = self._selected_audio_preset(profile, preset_name)
         return apply_virtuoso_native_pipewire_eq(profile, selected)
 
@@ -772,8 +784,8 @@ class LinuxCueService:
         profile = self.load_profile(name)
         if profile is None:
             raise RuntimeError(f"Profile not found: {name}")
-        if profile.target_device != "virtuoso-se":
-            raise RuntimeError(f"Profile is not a Virtuoso profile: {name}")
+        if profile.target_device not in {"virtuoso-se", "void-elite"}:
+            raise RuntimeError(f"Profile is not a supported headset EQ profile: {name}")
         selected = self._selected_audio_preset(profile, preset_name)
         path = write_virtuoso_runtime_eq_state(profile, selected)
         return {
@@ -1590,6 +1602,8 @@ class LinuxCueService:
                 "headset-hid": 0,
                 "wireless-receiver-control": 50,
             }.get(role, 100)
+        if profile.target_device == "void-elite":
+            return 0 if "void" in device.support.model_hint.casefold() else 100
         if profile.target_device == "m65":
             return 0 if device.support.family == "mouse" else 100
         return 100
@@ -1601,6 +1615,9 @@ class LinuxCueService:
             return self.resolve_m65_device(prefer_real=False)
         if profile.target_device == "virtuoso-se":
             return self.resolve_virtuoso_device(prefer_real=False)
+        if profile.target_device == "void-elite":
+            fallback_probe = mock_probe_for_slug("void-elite-wireless-gaming-dongle-0a51")
+            return self.device_from_probe(fallback_probe) if fallback_probe else None
         return None
 
     @staticmethod
@@ -1615,6 +1632,8 @@ class LinuxCueService:
             candidates.add("virtuoso-se")
         if "virtuoso" in name and "receiver" in name:
             candidates.add("virtuoso-rgb-wireless-receiver")
+        if "void elite" in name:
+            candidates.add("void-elite")
         return candidates
 
     def profile_companion_label(self, profile: Profile) -> str:
@@ -1667,6 +1686,12 @@ class LinuxCueService:
             profile.target_device = "m65"
             profile.target_family = "mouse"
             profile.description = profile.description or "M65 DPI and lighting profile"
+            return profile
+
+        if "void elite" in name:
+            profile.target_device = "void-elite"
+            profile.target_family = "headset"
+            profile.description = profile.description or "VOID Elite Wireless PipeWire EQ profile"
             return profile
 
         if "virtuoso" in name or profile.audio:
