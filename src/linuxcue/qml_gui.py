@@ -1184,7 +1184,21 @@ read -r -p "Enter zum Schliessen..."
             label = self._headset_profile_label(profile)
             self._status = f"{label} Headset-Regler gespeichert."
             if profile.target_device == "void-elite":
-                self._status = f"{label} Regler gespeichert. HID-Steuerung ist noch nicht verifiziert."
+                if live:
+                    try:
+                        result = self.service.set_headset_audio_controls(
+                            profile,
+                            mic_level=profile.headset.mic_level,
+                            sidetone=profile.headset.sidetone,
+                        )
+                        if result.get("ok"):
+                            self._status = f"{label} Mic/Nebenton aktiv."
+                        else:
+                            self._status = f"{label} Regler gespeichert, PipeWire teilweise abgelehnt."
+                    except Exception as exc:
+                        self._status = f"{label} Regler gespeichert, Linux-Audio-Set fehlgeschlagen: {exc}"
+                else:
+                    self._status = f"{label} Regler gespeichert. HID-Steuerung ist noch nicht verifiziert."
                 self.dataChanged.emit()
                 return
             if live:
@@ -1400,6 +1414,9 @@ read -r -p "Enter zum Schliessen..."
                 if slug == "virtuoso-se":
                     image_source = "../assets/devices/virtuoso-wireless-card.png" if virtuoso_wireless else "../assets/devices/virtuoso-usb-card.png"
                     meta = "Wireless Link: 2.4 GHz" if virtuoso_wireless else "USB Link: kabelgebunden"
+                battery_text = self._system_battery_text(device_details) if slug == "void-elite" else ""
+                if battery_text:
+                    meta = battery_text
                 cards.append(
                     {
                         "slug": slug,
@@ -1415,6 +1432,7 @@ read -r -p "Enter zum Schliessen..."
                         "productId": self._normalized_hex_id(device_details.get("product_id")),
                         "transport": str(device_details.get("transport") or ""),
                         "endpointCount": int(device_details.get("endpoint_count") or 1),
+                        "batteryText": battery_text,
                         "path": str(device_details.get("path") or ""),
                         "reportIncludes": "Basisdaten, USB-Infos, HID-Descriptoren, Feature-Report-Map",
                         "nextStep": str(device_details.get("next_step") or "Vollstaendigen Geraetebericht speichern und als GitHub Device support request anhaengen."),
@@ -1445,6 +1463,42 @@ read -r -p "Enter zum Schliessen..."
                 )
                 entry["endpoint_count"] = int(entry.get("endpoint_count") or 0) + 1
             return details
+
+        def _system_battery_text(self, device_details: dict[str, Any]) -> str:
+            if not sys.platform.startswith("linux") or not shutil.which("upower"):
+                return ""
+            try:
+                devices = subprocess.run(["upower", "-e"], check=False, capture_output=True, text=True, timeout=3)
+            except Exception:
+                return ""
+            product_tokens = {
+                token
+                for token in str(device_details.get("product_id") or "").replace("0x", "").split()
+                if token
+            }
+            candidates = [line.strip() for line in devices.stdout.splitlines() if line.strip()]
+            for path in candidates:
+                try:
+                    info = subprocess.run(["upower", "-i", path], check=False, capture_output=True, text=True, timeout=3)
+                except Exception:
+                    continue
+                text = info.stdout.casefold()
+                if "corsair" not in text and "void" not in text and not any(token in text for token in product_tokens):
+                    continue
+                percent = self._extract_upower_value(info.stdout, "percentage")
+                state = self._extract_upower_value(info.stdout, "state")
+                if percent:
+                    return f"Akku: {percent}" + (f" ({state})" if state else "")
+            return ""
+
+        @staticmethod
+        def _extract_upower_value(text: str, key: str) -> str:
+            prefix = f"{key}:"
+            for line in text.splitlines():
+                stripped = line.strip()
+                if stripped.casefold().startswith(prefix):
+                    return stripped.split(":", 1)[1].strip()
+            return ""
 
         def _unknown_device_cards(self, status: dict[str, Any]) -> list[dict[str, Any]]:
             grouped: dict[str, dict[str, Any]] = {}

@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from .audio_controls import set_headset_sidetone, set_headset_source_volume
 from .device_manager import DeviceManager
 from .easyeffects_export import export_virtuoso_easyeffects_preset, export_virtuoso_easyeffects_presets, preset_export_name
 from .icue_importer import import_icue_profile, profiles_from_icue
@@ -779,6 +780,18 @@ class LinuxCueService:
         if shutil.which("pactl") is None:
             raise RuntimeError("pactl was not found. Install PulseAudio/PipeWire Pulse tools first.")
         return set_virtuoso_eq_volume(percent)
+
+    def set_headset_audio_controls(self, profile: Profile, *, mic_level: int, sidetone: int) -> dict[str, object]:
+        if not sys.platform.startswith("linux"):
+            raise RuntimeError("Headset audio controls are only supported on Linux/PipeWire.")
+        hint = profile.target_device if profile.target_device else profile.name
+        mic_result = set_headset_source_volume(mic_level, match_hint=hint)
+        sidetone_result = set_headset_sidetone(sidetone, match_hint=hint)
+        return {
+            "ok": bool(mic_result.get("ok")) and bool(sidetone_result.get("ok")),
+            "mic": mic_result,
+            "sidetone": sidetone_result,
+        }
 
     def update_virtuoso_live_eq(self, name: str, preset_name: str | None = None) -> dict[str, object]:
         profile = self.load_profile(name)

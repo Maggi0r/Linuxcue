@@ -1859,17 +1859,16 @@ ApplicationWindow {
                             Panel {
                                 Layout.preferredWidth: 330
                                 Layout.fillHeight: true
-                                title: showVoidEliteDashboard ? "Ausgabe" : "Headset-Regler"
+                                title: "Headset-Regler"
                                 ColumnLayout {
                                     anchors.fill: parent
                                     anchors.margins: 18
                                     anchors.topMargin: 54
                                     spacing: 12
-                                    Text { text: "Mic Sidetone"; color: "white"; font.bold: true; font.pixelSize: 13; visible: !showVoidEliteDashboard }
+                                    Text { text: showVoidEliteDashboard ? "Nebenton" : "Mic Sidetone"; color: "white"; font.bold: true; font.pixelSize: 13 }
                                     Slider {
                                         id: sidetoneSlider
                                         Layout.fillWidth: true
-                                        visible: !showVoidEliteDashboard
                                         from: 0
                                         to: 100
                                         value: linuxcue.virtuosoSidetone
@@ -1878,11 +1877,10 @@ ApplicationWindow {
                                                 linuxcue.setVirtuosoControls(Math.round(value), Math.round(micSlider.value), sleepBox.model[sleepBox.currentIndex], voiceSwitch.checked, autoLiveWrite)
                                         }
                                     }
-                                    Text { text: "Mic Level"; color: "white"; font.bold: true; font.pixelSize: 13; visible: !showVoidEliteDashboard }
+                                    Text { text: "Mic Level"; color: "white"; font.bold: true; font.pixelSize: 13 }
                                     Slider {
                                         id: micSlider
                                         Layout.fillWidth: true
-                                        visible: !showVoidEliteDashboard
                                         from: 0
                                         to: 100
                                         value: linuxcue.virtuosoMicLevel
@@ -1947,7 +1945,7 @@ ApplicationWindow {
                                         Text {
                                             anchors.fill: parent
                                             anchors.margins: 12
-                                            text: showVoidEliteDashboard ? "VOID Elite nutzt hier bewusst nur den Linux-Audiopfad. RGB, Akku und Dongle-Steuerung bleiben gesperrt, bis echte iCUE-HID-Captures vorliegen." : "Native PipeWire EQ nutzt eine kontrollierbare Biquad-Kette. Nach einmaliger Aktivierung werden Slider live an PipeWire uebertragen."
+                                            text: showVoidEliteDashboard ? "VOID Elite nutzt EQ, Mic-Level und Nebenton ueber den Linux-Audiopfad. Akku kommt vom System; RGB, Pairing und Dongle-HID bleiben bis zu echten iCUE-Captures gesperrt." : "Native PipeWire EQ nutzt eine kontrollierbare Biquad-Kette. Nach einmaliger Aktivierung werden Slider live an PipeWire uebertragen."
                                             color: "#d7edf0"
                                             wrapMode: Text.WordWrap
                                             font.pixelSize: 12
