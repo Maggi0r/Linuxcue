@@ -2,7 +2,7 @@
 pkgname=linuxcue
 pkgver=0.1.0
 pkgrel=1
-pkgdesc="Linux-first Corsair control center for K95 RGB Platinum, M65 Pro RGB, and Virtuoso SE"
+pkgdesc="Linux control center for Corsair iCUE keyboards, mice, and headsets"
 arch=("any")
 url="https://github.com/Maggi0r/Linuxcue"
 license=("MIT")

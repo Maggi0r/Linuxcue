@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=linuxcue Control Center
-Comment=Linux control center for Corsair K95, M65, and Virtuoso SE
+Comment=Linux control center for Corsair iCUE devices
 Exec=linuxcue qml-gui
 Icon=linuxcue
 Terminal=false

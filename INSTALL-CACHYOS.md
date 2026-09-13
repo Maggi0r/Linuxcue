@@ -1,10 +1,25 @@
-# CachyOS VM Test Guide
+# CachyOS / Arch Installation Guide
 
-This project is packaged for CachyOS through the included Arch-style `PKGBUILD`.
-The package installs the CLI, the QML dashboard launcher, desktop entry, and udev rules
-for Corsair HID access.
+linuxcue is packaged for CachyOS and other Arch-based systems through the
+included Arch-style `PKGBUILD`. The package installs the CLI, QML dashboard,
+desktop entry, icons, and udev rules for Corsair HID access.
 
-## One-Command Package Install
+## Easiest Install
+
+For normal users, use the bootstrap installer. It downloads or updates linuxcue
+under `~/.cache/linuxcue/source` and then runs the package installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Maggi0r/Linuxcue/main/install.sh | bash
+```
+
+If you already have the repository:
+
+```bash
+bash install.sh
+```
+
+## Local Package Install
 
 From the project root:
 
@@ -14,12 +29,12 @@ bash scripts/install-cachyos-package.sh
 
 This installs the required CachyOS/Arch packages, builds the local `linuxcue`
 package, installs it through `pacman`, reloads udev rules, and keeps the desktop
-launcher on the new QML dashboard.
+launcher on the QML dashboard.
 
 ## Build Dependencies
 
 ```bash
-sudo pacman -S --needed base-devel git python python-build python-installer python-setuptools python-wheel python-hidapi python-pyusb pyside6 qt6-declarative easyeffects lsp-plugins-lv2
+sudo pacman -S --needed base-devel git python python-build python-installer python-setuptools python-wheel python-hidapi python-numpy python-pyusb libpulse pipewire pipewire-pulse wireplumber pyside6 qt6-declarative easyeffects lsp-plugins-lv2
 ```
 
 ## Build And Install
@@ -43,8 +58,9 @@ Or start from the desktop menu entry named `linuxcue`.
 
 ## Updates From GitHub
 
-The QML dashboard checks GitHub automatically after startup. You can also use the
-sidebar buttons or the CLI:
+The QML dashboard checks GitHub automatically after startup and highlights the
+update button only when an update is available. You can also use the sidebar
+buttons or the CLI:
 
 ```bash
 linuxcue check-update
