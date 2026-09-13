@@ -1,6 +1,6 @@
 # Maintainer: linuxcue local build
 pkgname=linuxcue
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Linux control center for Corsair iCUE keyboards, mice, and headsets"
 arch=("any")

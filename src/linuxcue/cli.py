@@ -30,7 +30,7 @@ def qt_status() -> dict[str, object]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="linuxcue",
-        description="Early Linux-first replacement for Corsair iCUE.",
+        description="Linux control center for Corsair iCUE devices.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 

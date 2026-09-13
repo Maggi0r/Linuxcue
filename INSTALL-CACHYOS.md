@@ -43,7 +43,7 @@ From the project root:
 
 ```bash
 bash scripts/build-cachyos-package.sh
-sudo pacman -U packaging/arch/linuxcue-0.1.0-1-any.pkg.tar.zst
+sudo pacman -U packaging/arch/linuxcue-0.1.1-1-any.pkg.tar.zst
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
